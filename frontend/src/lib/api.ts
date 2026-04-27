@@ -82,8 +82,12 @@ export async function getProducts(params: Record<string, string | number | undef
 
 export async function getProduct(
   slug: string
-): Promise<{ data: Product; related: { data: Product[] } }> {
-  return request(`/products/${slug}`);
+): Promise<{ data: Product; related: Product[] }> {
+  const res = await request<{ data: Product; related: Product[] | { data: Product[] } }>(
+    `/products/${slug}`
+  );
+  const related = Array.isArray(res.related) ? res.related : (res.related?.data ?? []);
+  return { data: res.data, related };
 }
 
 export type CreateOrderInput = {

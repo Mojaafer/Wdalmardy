@@ -118,11 +118,11 @@ export default async function ProductPage({
         </div>
       </div>
 
-      {related.data.length > 0 && (
+      {related.length > 0 && (
         <section className="mt-12">
           <h2 className="text-xl font-extrabold text-center mb-6">{t('product.related')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {related.data.slice(0, 5).map((p) => (
+            {related.slice(0, 5).map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
