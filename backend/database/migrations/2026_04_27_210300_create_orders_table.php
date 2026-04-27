@@ -19,8 +19,8 @@ return new class extends Migration
             $table->text('address_details')->nullable();
             $table->enum('delivery_method', ['delivery', 'pickup'])->default('delivery');
             $table->enum('payment_method', ['whatsapp', 'cod', 'bank_transfer'])->default('whatsapp');
-            $table->enum('status', ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'])
-                ->default('pending');
+            $table->enum('status', ['new', 'preparing', 'shipped', 'delivered', 'cancelled'])
+                ->default('new');
             $table->decimal('subtotal', 12, 2);
             $table->decimal('delivery_fee', 12, 2)->default(0);
             $table->decimal('total', 12, 2);
