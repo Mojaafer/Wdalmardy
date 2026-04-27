@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -31,6 +32,14 @@ class OrderController extends Controller
         $deliveryFee = $validated['delivery_method'] === 'delivery' ? 1500 : 0;
 
         $order = DB::transaction(function () use ($validated, $deliveryFee) {
+            $customer = Customer::firstOrNew(['phone' => $validated['customer_phone']]);
+            $customer->fill([
+                'name' => $validated['customer_name'],
+                'email' => $validated['customer_email'] ?? $customer->email,
+                'city' => $validated['address_state'] ?? $customer->city,
+            ]);
+            $customer->save();
+
             $subtotal = 0;
             $itemsToCreate = [];
 
@@ -50,6 +59,7 @@ class OrderController extends Controller
 
             $order = Order::create([
                 'order_number' => Order::generateOrderNumber(),
+                'customer_id' => $customer->id,
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
                 'customer_email' => $validated['customer_email'] ?? null,
@@ -58,7 +68,7 @@ class OrderController extends Controller
                 'address_details' => $validated['address_details'] ?? null,
                 'delivery_method' => $validated['delivery_method'],
                 'payment_method' => $validated['payment_method'],
-                'status' => 'pending',
+                'status' => 'new',
                 'subtotal' => $subtotal,
                 'delivery_fee' => $deliveryFee,
                 'total' => $subtotal + $deliveryFee,
@@ -68,6 +78,9 @@ class OrderController extends Controller
             foreach ($itemsToCreate as $item) {
                 OrderItem::create([...$item, 'order_id' => $order->id]);
             }
+
+            $customer->increment('total_orders');
+            $customer->increment('total_spent', (float) $order->total);
 
             return $order->load('items');
         });
@@ -84,6 +97,11 @@ class OrderController extends Controller
                     : null,
             ],
         ], 201);
+    }
+
+    public function buildWhatsappUrlPublic(Order $order): string
+    {
+        return $this->buildWhatsappUrl($order);
     }
 
     private function buildWhatsappUrl(Order $order): string

@@ -4,14 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
     use HasFactory;
 
+    public const STATUSES = ['new', 'preparing', 'shipped', 'delivered', 'cancelled'];
+
     protected $fillable = [
         'order_number',
+        'customer_id',
         'customer_name',
         'customer_phone',
         'customer_email',
@@ -21,6 +25,7 @@ class Order extends Model
         'delivery_method',
         'payment_method',
         'status',
+        'assigned_driver_id',
         'subtotal',
         'delivery_fee',
         'total',
@@ -38,8 +43,24 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    public function driver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_driver_id');
+    }
+
     public static function generateOrderNumber(): string
     {
-        return 'WD-'.now()->format('ymd').str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
+        $prefix = 'WD-'.now()->format('ymd');
+        $last = static::where('order_number', 'like', $prefix.'-%')
+            ->orderByDesc('id')
+            ->value('order_number');
+        $seq = $last ? ((int) substr((string) $last, strrpos((string) $last, '-') + 1)) : 0;
+
+        return $prefix.'-'.str_pad((string) ($seq + 1), 3, '0', STR_PAD_LEFT);
     }
 }
