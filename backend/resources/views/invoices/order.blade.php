@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>فاتورة {{ $order->order_number }}</title>
 <style>
-  body { font-family: DejaVu Sans, sans-serif; direction: rtl; color: #1a2a23; font-size: 12px; }
+  body { font-family: dejavusans, sans-serif; direction: rtl; color: #1a2a23; font-size: 12px; }
   h1 { color: #0E5C3A; margin: 0; font-size: 20px; }
   .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0E5C3A; padding-bottom: 10px; margin-bottom: 20px; }
   .meta { background: #FBEFE2; padding: 10px; border-radius: 6px; margin-bottom: 16px; }

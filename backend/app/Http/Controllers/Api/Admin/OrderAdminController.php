@@ -5,8 +5,9 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\View;
+use Mpdf\Mpdf;
 
 class OrderAdminController extends Controller
 {
@@ -77,8 +78,31 @@ class OrderAdminController extends Controller
     {
         $order->load(['items', 'customer']);
 
-        $pdf = Pdf::loadView('invoices.order', ['order' => $order]);
+        $html = View::make('invoices.order', ['order' => $order])->render();
 
-        return $pdf->download('invoice-'.$order->order_number.'.pdf');
+        $tmp = storage_path('app/mpdf-tmp');
+        if (! is_dir($tmp)) {
+            @mkdir($tmp, 0775, true);
+        }
+
+        $mpdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'directionality' => 'rtl',
+            'autoScriptToLang' => true,
+            'autoLangToFont' => true,
+            'tempDir' => $tmp,
+            'default_font' => 'dejavusans',
+        ]);
+
+        $mpdf->SetTitle('فاتورة '.$order->order_number);
+        $mpdf->WriteHTML($html);
+
+        $filename = 'invoice-'.$order->order_number.'.pdf';
+
+        return response($mpdf->Output($filename, 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 }

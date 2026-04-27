@@ -33,6 +33,7 @@ class ProductResource extends JsonResource
                 : 0,
             'stock' => $this->stock,
             'in_stock' => $this->stock > 0,
+            'is_active' => (bool) $this->is_active,
             'is_featured' => $this->is_featured,
             'rating' => (float) $this->rating,
             'reviews_count' => $this->reviews_count,
