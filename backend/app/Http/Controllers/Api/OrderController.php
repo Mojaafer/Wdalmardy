@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -24,6 +25,7 @@ class OrderController extends Controller
             'delivery_method' => 'required|in:delivery,pickup',
             'payment_method' => 'required|in:whatsapp,cod,bank_transfer',
             'notes' => 'nullable|string|max:500',
+            'coupon_code' => 'nullable|string|max:60',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1|max:999',
@@ -57,6 +59,24 @@ class OrderController extends Controller
                 ];
             }
 
+            $coupon = null;
+            $discount = 0;
+            $finalDeliveryFee = $deliveryFee;
+            if (! empty($validated['coupon_code'])) {
+                $coupon = Coupon::where('code', strtoupper((string) $validated['coupon_code']))
+                    ->lockForUpdate()
+                    ->first();
+                if ($coupon && $coupon->status() === 'active' && $subtotal >= (float) $coupon->min_order_amount) {
+                    $discount = $coupon->calculateDiscount($subtotal, $deliveryFee);
+                    if ($coupon->type === 'free_shipping') {
+                        $finalDeliveryFee = 0;
+                    }
+                } else {
+                    $coupon = null;
+                }
+            }
+            $total = max(0, $subtotal - $discount) + $finalDeliveryFee;
+
             $order = Order::create([
                 'order_number' => Order::generateOrderNumber(),
                 'customer_id' => $customer->id,
@@ -70,10 +90,17 @@ class OrderController extends Controller
                 'payment_method' => $validated['payment_method'],
                 'status' => 'new',
                 'subtotal' => $subtotal,
-                'delivery_fee' => $deliveryFee,
-                'total' => $subtotal + $deliveryFee,
+                'delivery_fee' => $finalDeliveryFee,
+                'total' => $total,
                 'notes' => $validated['notes'] ?? null,
+                'coupon_id' => $coupon?->id,
+                'coupon_code' => $coupon?->code,
+                'discount_amount' => $discount,
             ]);
+
+            if ($coupon) {
+                $coupon->increment('used_count');
+            }
 
             foreach ($itemsToCreate as $item) {
                 OrderItem::create([...$item, 'order_id' => $order->id]);
@@ -91,6 +118,8 @@ class OrderController extends Controller
                 'total' => (float) $order->total,
                 'subtotal' => (float) $order->subtotal,
                 'delivery_fee' => (float) $order->delivery_fee,
+                'discount_amount' => (float) $order->discount_amount,
+                'coupon_code' => $order->coupon_code,
                 'status' => $order->status,
                 'whatsapp_url' => $order->payment_method === 'whatsapp'
                     ? $this->buildWhatsappUrl($order)
@@ -131,6 +160,10 @@ class OrderController extends Controller
 
         $lines[] = '';
         $lines[] = 'المجموع الفرعي: '.number_format((float) $order->subtotal).' ج.س';
+        if ((float) $order->discount_amount > 0) {
+            $code = $order->coupon_code ? " (كود: {$order->coupon_code})" : '';
+            $lines[] = 'الخصم'.$code.': -'.number_format((float) $order->discount_amount).' ج.س';
+        }
         $lines[] = 'رسوم التوصيل: '.number_format((float) $order->delivery_fee).' ج.س';
         $lines[] = '*الإجمالي: '.number_format((float) $order->total).' ج.س*';
 

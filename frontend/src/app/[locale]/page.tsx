@@ -1,6 +1,7 @@
 import { getCategories, getProducts } from '@/lib/api';
 import { CategoryCard } from '@/components/CategoryCard';
 import { ProductCard } from '@/components/ProductCard';
+import OffersBanner from '@/components/OffersBanner';
 import { Link } from '@/i18n/routing';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { ArrowLeft, Bike, MessageCircle, Phone, ListChecks } from 'lucide-react';
@@ -18,6 +19,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   return (
     <div>
+      {/* Active offers banner from CMS */}
+      <OffersBanner locale={locale} />
+
       {/* Hero */}
       <section className="bg-brand-cream-100 overflow-hidden">
         <div className="container grid md:grid-cols-2 gap-6 py-10 md:py-14 items-center">

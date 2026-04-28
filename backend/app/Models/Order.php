@@ -30,13 +30,22 @@ class Order extends Model
         'delivery_fee',
         'total',
         'notes',
+        'coupon_code',
+        'coupon_id',
+        'discount_amount',
     ];
 
     protected $casts = [
         'subtotal' => 'decimal:2',
         'delivery_fee' => 'decimal:2',
         'total' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
     ];
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
+    }
 
     public function items(): HasMany
     {

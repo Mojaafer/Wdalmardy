@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { useCart } from '@/lib/cart';
-import { createOrder } from '@/lib/api';
+import { createOrder, validateCoupon, type CouponValidation } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import { ProductImage } from '@/components/ProductImage';
 import { Truck, Store, MessageCircle, Banknote, Lock, ShieldCheck, ArrowLeft } from 'lucide-react';
@@ -43,11 +43,35 @@ export default function CheckoutPage() {
   const [delivery, setDelivery] = useState<'delivery' | 'pickup'>('delivery');
   const [payment, setPayment] = useState<'whatsapp' | 'cod'>('whatsapp');
   const [notes, setNotes] = useState('');
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState<CouponValidation | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
-  const deliveryFee = delivery === 'delivery' ? 1500 : 0;
-  const total = subtotal + deliveryFee;
+  const baseDeliveryFee = delivery === 'delivery' ? 1500 : 0;
+  const deliveryFee = coupon?.free_shipping ? 0 : baseDeliveryFee;
+  const discount = coupon ? coupon.discount : 0;
+  const total = Math.max(0, subtotal - discount) + deliveryFee;
+
+  async function applyCoupon() {
+    setCouponError(null);
+    setCouponLoading(true);
+    try {
+      const r = await validateCoupon(couponInput.trim(), subtotal, baseDeliveryFee);
+      setCoupon(r.data);
+    } catch (e) {
+      setCoupon(null);
+      setCouponError(
+        e instanceof Error
+          ? e.message.replace(/^API \d+:\s*/, '').replace(/^\{.*"message":"([^"]+)".*\}$/, '$1')
+          : t('common.error'),
+      );
+    } finally {
+      setCouponLoading(false);
+    }
+  }
 
   if (!mounted) {
     return <div className="container py-10 text-center text-gray-500">{t('common.loading')}</div>;
@@ -105,6 +129,7 @@ export default function CheckoutPage() {
         delivery_method: delivery,
         payment_method: payment,
         notes: notes || undefined,
+        coupon_code: coupon?.code,
         items: items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
       });
       const order = res.data;
@@ -283,6 +308,40 @@ export default function CheckoutPage() {
               );
             })}
           </ul>
+          <div className="border-t border-gray-100 pt-3">
+            {coupon ? (
+              <div className="flex items-center justify-between bg-emerald-50 text-emerald-800 rounded-lg px-3 py-2 text-sm">
+                <span>
+                  <strong>{coupon.code}</strong>{' '}
+                  {coupon.free_shipping
+                    ? locale === 'ar' ? '— شحن مجاني' : '— Free shipping'
+                    : locale === 'ar' ? `— خصم ${formatPrice(coupon.discount, locale)} ج.س` : `— ${formatPrice(coupon.discount, locale)} ${t('common.currency')} off`}
+                </span>
+                <button type="button" onClick={() => setCoupon(null)} className="text-xs underline">
+                  {locale === 'ar' ? 'إزالة' : 'remove'}
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                  placeholder={locale === 'ar' ? 'أدخل كود الخصم' : 'Coupon code'}
+                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm uppercase"
+                />
+                <button
+                  type="button"
+                  onClick={applyCoupon}
+                  disabled={!couponInput || couponLoading}
+                  className="bg-brand-green text-white text-sm font-bold rounded-lg px-3 disabled:opacity-50"
+                >
+                  {couponLoading ? '...' : locale === 'ar' ? 'تطبيق' : 'Apply'}
+                </button>
+              </div>
+            )}
+            {couponError && <div className="text-rose-600 text-xs mt-1">{couponError}</div>}
+          </div>
           <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">{t('cart.subtotal')}</span>
@@ -290,10 +349,30 @@ export default function CheckoutPage() {
                 {formatPrice(subtotal, locale)} {t('common.currency')}
               </span>
             </div>
+            {discount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">
+                  {locale === 'ar' ? 'الخصم' : 'Discount'}
+                </span>
+                <span className="text-emerald-600">
+                  -{formatPrice(discount, locale)} {t('common.currency')}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-500">{t('cart.delivery_fee')}</span>
               <span className="text-brand-green">
-                {formatPrice(deliveryFee, locale)} {t('common.currency')}
+                {coupon?.free_shipping ? (
+                  <span>
+                    <s className="opacity-50 me-1">
+                      {formatPrice(baseDeliveryFee, locale)}
+                    </s>
+                    {formatPrice(0, locale)}
+                  </span>
+                ) : (
+                  formatPrice(deliveryFee, locale)
+                )}{' '}
+                {t('common.currency')}
               </span>
             </div>
             <div className="flex justify-between items-baseline pt-2">

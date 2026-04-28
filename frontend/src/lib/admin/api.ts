@@ -295,3 +295,178 @@ export const blockCustomer = (id: number) =>
   request<{ data: AdminCustomer }>(`/admin/customers/${id}/block`, { method: 'POST' });
 export const deleteCustomer = (id: number) =>
   request<{ data: { ok: boolean } }>(`/admin/customers/${id}`, { method: 'DELETE' });
+
+// Offers
+export type AdminOffer = {
+  id: number;
+  type: 'banner' | 'daily' | 'weekly' | 'percentage' | 'fixed' | 'free_shipping';
+  title: string;
+  title_en: string | null;
+  description: string | null;
+  description_en: string | null;
+  discount_value: number;
+  discount_unit: 'percent' | 'amount' | 'free_shipping';
+  max_discount: number | null;
+  scope: 'all' | 'category' | 'product';
+  scope_id: number | null;
+  banner_image: string | null;
+  banner_link: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  is_active: boolean;
+  priority: number;
+  status: 'active' | 'scheduled' | 'expired' | 'paused';
+  is_live: boolean;
+  created_at: string;
+};
+export type OfferStats = { total: number; active: number; scheduled: number; expired: number; paused: number };
+
+export const listOffers = (params: Record<string, string | number> = {}) => {
+  const qs = new URLSearchParams(
+    Object.entries(params).map(([k, v]) => [k, String(v)]),
+  ).toString();
+  return request<{ data: AdminOffer[]; meta: { total: number; current_page: number; last_page: number }; stats: OfferStats }>(
+    `/admin/offers${qs ? `?${qs}` : ''}`,
+  );
+};
+export const createOffer = (body: Record<string, unknown>) =>
+  request<{ data: AdminOffer }>('/admin/offers', { method: 'POST', body: JSON.stringify(body) });
+export const updateOffer = (id: number, body: Record<string, unknown>) =>
+  request<{ data: AdminOffer }>(`/admin/offers/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+export const toggleOffer = (id: number) =>
+  request<{ data: AdminOffer }>(`/admin/offers/${id}/toggle`, { method: 'POST' });
+export const deleteOffer = (id: number) =>
+  request<{ data: { ok: boolean } }>(`/admin/offers/${id}`, { method: 'DELETE' });
+
+// Coupons
+export type AdminCoupon = {
+  id: number;
+  code: string;
+  type: 'percent' | 'fixed' | 'free_shipping';
+  value: number;
+  max_discount: number | null;
+  min_order_amount: number;
+  max_uses: number | null;
+  used_count: number;
+  max_uses_per_customer: number | null;
+  applies_to: 'all' | 'new_customers';
+  starts_at: string | null;
+  ends_at: string | null;
+  is_active: boolean;
+  status: 'active' | 'scheduled' | 'expired' | 'paused' | 'exhausted';
+  created_at: string;
+};
+export type CouponStats = { total: number; active: number; expired: number; exhausted: number };
+
+export const listCoupons = (params: Record<string, string | number> = {}) => {
+  const qs = new URLSearchParams(
+    Object.entries(params).map(([k, v]) => [k, String(v)]),
+  ).toString();
+  return request<{ data: AdminCoupon[]; meta: { total: number }; stats: CouponStats }>(
+    `/admin/coupons${qs ? `?${qs}` : ''}`,
+  );
+};
+export const createCoupon = (body: Record<string, unknown>) =>
+  request<{ data: AdminCoupon }>('/admin/coupons', { method: 'POST', body: JSON.stringify(body) });
+export const updateCoupon = (id: number, body: Record<string, unknown>) =>
+  request<{ data: AdminCoupon }>(`/admin/coupons/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+export const deleteCoupon = (id: number) =>
+  request<{ data: { ok: boolean } }>(`/admin/coupons/${id}`, { method: 'DELETE' });
+
+// Suppliers
+export type AdminSupplier = {
+  id: number;
+  name: string;
+  contact_person: string | null;
+  business_type: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  tax_number: string | null;
+  logo: string | null;
+  registered_at: string | null;
+  status: 'active' | 'paused' | 'archived';
+  performance_rating: number;
+  total_purchases: number;
+  current_balance: number;
+  orders_count: number;
+  last_order_at: string | null;
+  notes: string | null;
+  created_at: string;
+};
+export type SupplierStats = { total: number; active: number; paused: number; open_orders: number; total_purchases: number };
+
+export const listSuppliers = (params: Record<string, string | number> = {}) => {
+  const qs = new URLSearchParams(
+    Object.entries(params).map(([k, v]) => [k, String(v)]),
+  ).toString();
+  return request<{ data: AdminSupplier[]; meta: { total: number }; stats: SupplierStats }>(
+    `/admin/suppliers${qs ? `?${qs}` : ''}`,
+  );
+};
+export const getSupplier = (id: number) =>
+  request<{ data: AdminSupplier }>(`/admin/suppliers/${id}`);
+export const createSupplier = (body: Record<string, unknown>) =>
+  request<{ data: AdminSupplier }>('/admin/suppliers', { method: 'POST', body: JSON.stringify(body) });
+export const updateSupplier = (id: number, body: Record<string, unknown>) =>
+  request<{ data: AdminSupplier }>(`/admin/suppliers/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+export const toggleSupplier = (id: number) =>
+  request<{ data: AdminSupplier }>(`/admin/suppliers/${id}/toggle`, { method: 'POST' });
+export const deleteSupplier = (id: number) =>
+  request<{ data: { ok: boolean } }>(`/admin/suppliers/${id}`, { method: 'DELETE' });
+
+// Employees
+export type AdminEmployee = {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  is_active: boolean;
+  role: string | null;
+  role_label: string | null;
+  last_login_at: string | null;
+  created_at: string;
+};
+export type EmployeeActivity = {
+  id: number;
+  action: string;
+  description: string;
+  occurred_at: string;
+  ip_address: string | null;
+};
+export type EmployeeStats = { total: number; active: number; inactive: number; roles: number; logins_today: number };
+
+export const listEmployees = (params: Record<string, string | number> = {}) => {
+  const qs = new URLSearchParams(
+    Object.entries(params).map(([k, v]) => [k, String(v)]),
+  ).toString();
+  return request<{ data: AdminEmployee[]; meta: { total: number }; stats: EmployeeStats }>(
+    `/admin/employees${qs ? `?${qs}` : ''}`,
+  );
+};
+export const getEmployee = (id: number) =>
+  request<{ data: AdminEmployee; permissions: string[]; activity: EmployeeActivity[] }>(
+    `/admin/employees/${id}`,
+  );
+export const createEmployee = (body: Record<string, unknown>) =>
+  request<{ data: AdminEmployee }>('/admin/employees', { method: 'POST', body: JSON.stringify(body) });
+export const updateEmployee = (id: number, body: Record<string, unknown>) =>
+  request<{ data: AdminEmployee }>(`/admin/employees/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+export const deleteEmployee = (id: number) =>
+  request<{ data: { ok: boolean } }>(`/admin/employees/${id}`, { method: 'DELETE' });
+
+// Roles & permissions
+export type AdminRole = {
+  id: number;
+  name: string;
+  label: string;
+  users_count: number;
+  permissions: string[];
+};
+export const listRoles = () =>
+  request<{ data: AdminRole[]; permissions: Record<string, string[]> }>('/admin/roles');
+export const updateRolePermissions = (role: string, permissions: string[]) =>
+  request<{ data: { ok: boolean } }>(`/admin/roles/${role}/permissions`, {
+    method: 'PUT',
+    body: JSON.stringify({ permissions }),
+  });

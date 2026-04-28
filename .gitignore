@@ -39,3 +39,7 @@ Thumbs.db
 # Build artifacts
 dist/
 build/
+
+# Local test plans / reports
+*-test-plan.md
+test-report-*.md

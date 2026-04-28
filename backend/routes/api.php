@@ -2,14 +2,23 @@
 
 use App\Http\Controllers\Api\Admin\AuthController;
 use App\Http\Controllers\Api\Admin\CategoryAdminController;
+use App\Http\Controllers\Api\Admin\CouponAdminController;
 use App\Http\Controllers\Api\Admin\CustomerAdminController;
 use App\Http\Controllers\Api\Admin\DashboardController;
+use App\Http\Controllers\Api\Admin\EmployeeAdminController;
+use App\Http\Controllers\Api\Admin\OfferAdminController;
 use App\Http\Controllers\Api\Admin\OrderAdminController;
 use App\Http\Controllers\Api\Admin\ProductAdminController;
+use App\Http\Controllers\Api\Admin\SupplierAdminController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\CouponController;
+use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
+
+Route::bind('employee', fn ($value) => User::findOrFail($value));
 
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
 
@@ -19,6 +28,8 @@ Route::get('/categories/{slug}', [CategoryController::class, 'show']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{slug}', [ProductController::class, 'show']);
 Route::post('/orders', [OrderController::class, 'store']);
+Route::get('/offers/active', [OfferController::class, 'active']);
+Route::post('/coupons/validate', [CouponController::class, 'validate']);
 
 // Admin auth
 Route::post('/admin/login', [AuthController::class, 'login']);
@@ -69,5 +80,48 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::put('/customers/{customer}', [CustomerAdminController::class, 'update']);
         Route::post('/customers/{customer}/block', [CustomerAdminController::class, 'block']);
         Route::delete('/customers/{customer}', [CustomerAdminController::class, 'destroy']);
+    });
+
+    Route::middleware('permission:offers.view')->group(function () {
+        Route::get('/offers', [OfferAdminController::class, 'index']);
+        Route::get('/offers/{offer}', [OfferAdminController::class, 'show']);
+    });
+    Route::middleware('permission:offers.manage')->group(function () {
+        Route::post('/offers', [OfferAdminController::class, 'store']);
+        Route::put('/offers/{offer}', [OfferAdminController::class, 'update']);
+        Route::post('/offers/{offer}/toggle', [OfferAdminController::class, 'toggle']);
+        Route::delete('/offers/{offer}', [OfferAdminController::class, 'destroy']);
+    });
+
+    Route::middleware('permission:coupons.view')->group(function () {
+        Route::get('/coupons', [CouponAdminController::class, 'index']);
+    });
+    Route::middleware('permission:coupons.manage')->group(function () {
+        Route::post('/coupons', [CouponAdminController::class, 'store']);
+        Route::put('/coupons/{coupon}', [CouponAdminController::class, 'update']);
+        Route::delete('/coupons/{coupon}', [CouponAdminController::class, 'destroy']);
+    });
+
+    Route::middleware('permission:suppliers.view')->group(function () {
+        Route::get('/suppliers', [SupplierAdminController::class, 'index']);
+        Route::get('/suppliers/{supplier}', [SupplierAdminController::class, 'show']);
+    });
+    Route::middleware('permission:suppliers.manage')->group(function () {
+        Route::post('/suppliers', [SupplierAdminController::class, 'store']);
+        Route::put('/suppliers/{supplier}', [SupplierAdminController::class, 'update']);
+        Route::post('/suppliers/{supplier}/toggle', [SupplierAdminController::class, 'toggleStatus']);
+        Route::delete('/suppliers/{supplier}', [SupplierAdminController::class, 'destroy']);
+    });
+
+    Route::middleware('permission:employees.view')->group(function () {
+        Route::get('/employees', [EmployeeAdminController::class, 'index']);
+        Route::get('/employees/{employee}', [EmployeeAdminController::class, 'show']);
+        Route::get('/roles', [EmployeeAdminController::class, 'roles']);
+    });
+    Route::middleware('permission:employees.manage')->group(function () {
+        Route::post('/employees', [EmployeeAdminController::class, 'store']);
+        Route::put('/employees/{employee}', [EmployeeAdminController::class, 'update']);
+        Route::delete('/employees/{employee}', [EmployeeAdminController::class, 'destroy']);
+        Route::put('/roles/{role}/permissions', [EmployeeAdminController::class, 'syncRolePermissions']);
     });
 });

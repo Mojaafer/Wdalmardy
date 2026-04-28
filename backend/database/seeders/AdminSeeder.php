@@ -20,6 +20,10 @@ class AdminSeeder extends Seeder
             'categories.view', 'categories.manage',
             'orders.view', 'orders.manage',
             'customers.view', 'customers.manage',
+            'offers.view', 'offers.manage',
+            'coupons.view', 'coupons.manage',
+            'suppliers.view', 'suppliers.manage',
+            'employees.view', 'employees.manage',
             'reports.view',
             'settings.manage',
             'users.manage',
@@ -37,6 +41,7 @@ class AdminSeeder extends Seeder
             'dashboard.view',
             'orders.view', 'orders.manage',
             'customers.view',
+            'suppliers.view',
             'reports.view',
         ]);
 
@@ -53,6 +58,8 @@ class AdminSeeder extends Seeder
             'categories.view',
             'orders.view', 'orders.manage',
             'customers.view',
+            'offers.view',
+            'suppliers.view',
         ]);
 
         $user = User::updateOrCreate(

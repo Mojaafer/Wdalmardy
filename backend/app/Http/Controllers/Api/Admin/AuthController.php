@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\EmployeeActivity;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -32,6 +33,14 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('admin')->plainTextToken;
+        $user->forceFill(['last_login_at' => now()])->save();
+
+        EmployeeActivity::log(
+            (int) $user->id,
+            'auth.login',
+            'سجّل دخوله إلى لوحة التحكم',
+            ['email' => $user->email],
+        );
 
         return response()->json([
             'data' => [
