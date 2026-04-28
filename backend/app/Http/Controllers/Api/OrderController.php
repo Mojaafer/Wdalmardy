@@ -75,7 +75,9 @@ class OrderController extends Controller
                     $coupon = null;
                 }
             }
-            $total = max(0, $subtotal - $discount) + $finalDeliveryFee;
+            $total = ($coupon?->type === 'free_shipping')
+                ? $subtotal + $finalDeliveryFee
+                : max(0, $subtotal - $discount) + $finalDeliveryFee;
 
             $order = Order::create([
                 'order_number' => Order::generateOrderNumber(),

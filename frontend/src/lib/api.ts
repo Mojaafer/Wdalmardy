@@ -55,8 +55,21 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     cache: init?.cache ?? 'no-store',
   });
   if (!res.ok) {
+    let message = res.statusText;
     const text = await res.text().catch(() => '');
-    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+    if (text) {
+      try {
+        const body = JSON.parse(text) as { message?: unknown };
+        if (typeof body.message === 'string') {
+          message = body.message;
+        } else {
+          message = text;
+        }
+      } catch {
+        message = text;
+      }
+    }
+    throw new Error(`API ${res.status}: ${message}`);
   }
   return res.json();
 }

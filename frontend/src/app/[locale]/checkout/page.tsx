@@ -53,7 +53,10 @@ export default function CheckoutPage() {
   const baseDeliveryFee = delivery === 'delivery' ? 1500 : 0;
   const deliveryFee = coupon?.free_shipping ? 0 : baseDeliveryFee;
   const discount = coupon ? coupon.discount : 0;
-  const total = Math.max(0, subtotal - discount) + deliveryFee;
+  const subtotalAfterDiscount = coupon?.free_shipping
+    ? subtotal
+    : Math.max(0, subtotal - discount);
+  const total = subtotalAfterDiscount + deliveryFee;
 
   async function applyCoupon() {
     setCouponError(null);
@@ -65,7 +68,7 @@ export default function CheckoutPage() {
       setCoupon(null);
       setCouponError(
         e instanceof Error
-          ? e.message.replace(/^API \d+:\s*/, '').replace(/^\{.*"message":"([^"]+)".*\}$/, '$1')
+          ? e.message.replace(/^API \d+:\s*/, '')
           : t('common.error'),
       );
     } finally {
@@ -349,7 +352,7 @@ export default function CheckoutPage() {
                 {formatPrice(subtotal, locale)} {t('common.currency')}
               </span>
             </div>
-            {discount > 0 && (
+            {discount > 0 && !coupon?.free_shipping && (
               <div className="flex justify-between">
                 <span className="text-gray-500">
                   {locale === 'ar' ? 'الخصم' : 'Discount'}
