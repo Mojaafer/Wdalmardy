@@ -24,6 +24,8 @@ class AdminSeeder extends Seeder
             'coupons.view', 'coupons.manage',
             'suppliers.view', 'suppliers.manage',
             'employees.view', 'employees.manage',
+            'inventory.view', 'inventory.manage',
+            'delivery.view', 'delivery.manage',
             'reports.view',
             'settings.manage',
             'users.manage',
@@ -42,6 +44,7 @@ class AdminSeeder extends Seeder
             'orders.view', 'orders.manage',
             'customers.view',
             'suppliers.view',
+            'inventory.view',
             'reports.view',
         ]);
 
@@ -49,6 +52,7 @@ class AdminSeeder extends Seeder
         $driver->syncPermissions([
             'orders.view',
             'orders.manage',
+            'delivery.view',
         ]);
 
         $branchStaff = Role::firstOrCreate(['name' => 'branch_staff', 'guard_name' => 'web']);
@@ -60,6 +64,7 @@ class AdminSeeder extends Seeder
             'customers.view',
             'offers.view',
             'suppliers.view',
+            'inventory.view', 'inventory.manage',
         ]);
 
         $user = User::updateOrCreate(

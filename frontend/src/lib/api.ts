@@ -114,8 +114,21 @@ export type CreateOrderInput = {
   payment_method: 'whatsapp' | 'cod' | 'bank_transfer';
   notes?: string;
   coupon_code?: string;
+  delivery_zone_id?: number;
   items: { product_id: number; quantity: number }[];
 };
+
+export type DeliveryZone = {
+  id: number;
+  name_ar: string;
+  name_en: string | null;
+  fee: number;
+  estimated_minutes: number;
+};
+
+export async function getDeliveryZones(): Promise<{ data: DeliveryZone[] }> {
+  return request('/delivery-zones');
+}
 
 export type ActiveOffer = {
   id: number;

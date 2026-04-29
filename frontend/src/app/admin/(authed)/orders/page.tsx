@@ -7,11 +7,14 @@ import {
   updateOrderStatus,
   resendWhatsapp,
   downloadInvoice,
+  listDrivers,
+  assignDriver,
   type AdminOrder,
+  type AdminDriver,
 } from '@/lib/admin/api';
 import { fmtSDG, fmtDate, STATUS_LABELS, STATUS_COLORS } from '@/lib/admin/format';
 import PageHeader from '@/components/admin/PageHeader';
-import { Search, MessageCircle, Printer, ShoppingBag, MapPin } from 'lucide-react';
+import { Search, MessageCircle, Printer, ShoppingBag, MapPin, Truck } from 'lucide-react';
 
 const STATUSES: { value: string; label: string }[] = [
   { value: '', label: 'الكل' },
@@ -27,6 +30,21 @@ export default function AdminOrdersPage() {
   const [meta, setMeta] = useState({ total: 0, current_page: 1, last_page: 1 });
   const [filters, setFilters] = useState({ status: '', q: '', page: 1 });
   const [selected, setSelected] = useState<AdminOrder | null>(null);
+  const [drivers, setDrivers] = useState<AdminDriver[]>([]);
+
+  useEffect(() => {
+    listDrivers()
+      .then((r) => setDrivers(r.data))
+      .catch(() => setDrivers([]));
+  }, []);
+
+  async function handleAssignDriver(driverId: number) {
+    if (!selected) return;
+    await assignDriver(selected.id, driverId);
+    const fresh = await getOrder(selected.id);
+    setSelected(fresh.data);
+    refresh();
+  }
 
   async function refresh() {
     const r = await listOrders({
@@ -251,6 +269,39 @@ export default function AdminOrdersPage() {
                     ))}
                   </div>
                 </Section>
+
+                {selected.delivery_method === 'delivery' && (
+                  <Section title="السائق">
+                    <div className="space-y-2">
+                      {selected.driver ? (
+                        <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm">
+                          <span className="flex items-center gap-2">
+                            <Truck className="w-4 h-4 text-emerald-600" />
+                            <span className="font-bold">{selected.driver.name}</span>
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-500">لم يتم تعيين سائق بعد</div>
+                      )}
+                      {drivers.length > 0 && (
+                        <select
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                          value={selected.driver?.id ?? ''}
+                          onChange={(e) => e.target.value && handleAssignDriver(Number(e.target.value))}
+                        >
+                          <option value="">اختر سائقاً للتعيين...</option>
+                          {drivers.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name}
+                              {d.profile?.availability && ` — ${d.profile.availability === 'available' ? 'متاح' : d.profile.availability === 'on_delivery' ? 'في توصيل' : 'خارج الدوام'}`}
+                              {d.profile?.zone && ` (${d.profile.zone.name_ar})`}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  </Section>
+                )}
 
                 <div className="flex gap-2 pt-2">
                   <button

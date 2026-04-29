@@ -33,6 +33,7 @@ class Order extends Model
         'coupon_code',
         'coupon_id',
         'discount_amount',
+        'delivery_zone_id',
     ];
 
     protected $casts = [
@@ -60,6 +61,11 @@ class Order extends Model
     public function driver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_driver_id');
+    }
+
+    public function deliveryZone(): BelongsTo
+    {
+        return $this->belongsTo(DeliveryZone::class);
     }
 
     public static function generateOrderNumber(): string

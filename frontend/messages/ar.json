@@ -122,6 +122,8 @@
     "district_placeholder": "اختر المحلية",
     "address_details": "الحي / المنطقة / العنوان التفصيلي",
     "address_details_placeholder": "أدخل العنوان بالتفصيل (رقم المنزل، الشارع، أقرب نقطة دالة)",
+    "delivery_zone": "منطقة التوصيل",
+    "delivery_zone_placeholder": "اختر منطقة التوصيل (يحدد الرسوم)",
     "delivery_method": "طريقة الاستلام",
     "delivery": "توصيل للمنزل",
     "delivery_sub": "توصيل الطلب إلى عنوانك",

@@ -122,6 +122,8 @@
     "district_placeholder": "Pick a district",
     "address_details": "Neighborhood / area / detailed address",
     "address_details_placeholder": "Enter the address (house no., street, nearest landmark)",
+    "delivery_zone": "Delivery zone",
+    "delivery_zone_placeholder": "Select a delivery zone (sets the fee)",
     "delivery_method": "Delivery method",
     "delivery": "Home delivery",
     "delivery_sub": "We deliver to your address",

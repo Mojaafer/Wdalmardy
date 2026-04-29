@@ -17,6 +17,7 @@ import {
   Building2,
   UserCog,
   Ticket,
+  Boxes,
   type LucideIcon,
 } from 'lucide-react';
 import type { AdminUser } from '@/lib/admin/api';
@@ -43,7 +44,8 @@ export default function Sidebar({ user }: { user: AdminUser }) {
       { href: '/admin/coupons', label: 'كوبونات الخصم', icon: Ticket, permission: 'coupons.view' },
       { href: '/admin/suppliers', label: 'الموردين', icon: Building2, permission: 'suppliers.view' },
       { href: '/admin/employees', label: 'الموظفين', icon: UserCog, permission: 'employees.view' },
-      { href: '/admin/delivery', label: 'إدارة التوصيل', icon: Truck, comingSoon: true },
+      { href: '/admin/inventory', label: 'إدارة المخزون', icon: Boxes, permission: 'inventory.view' },
+      { href: '/admin/delivery', label: 'إدارة التوصيل', icon: Truck, permission: 'delivery.view' },
       { href: '/admin/reports', label: 'التقارير', icon: BarChart3, permission: 'reports.view', comingSoon: true },
       { href: '/admin/permissions', label: 'صلاحيات المدير', icon: ShieldCheck, permission: 'employees.manage' },
       { href: '/admin/settings', label: 'إعدادات النظام', icon: Settings, permission: 'settings.manage', comingSoon: true },

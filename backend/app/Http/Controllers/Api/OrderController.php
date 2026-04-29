@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use App\Models\Customer;
+use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -26,14 +28,23 @@ class OrderController extends Controller
             'payment_method' => 'required|in:whatsapp,cod,bank_transfer',
             'notes' => 'nullable|string|max:500',
             'coupon_code' => 'nullable|string|max:60',
+            'delivery_zone_id' => 'nullable|integer|exists:delivery_zones,id',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1|max:999',
         ]);
 
-        $deliveryFee = $validated['delivery_method'] === 'delivery' ? 1500 : 0;
+        $zone = null;
+        if ($validated['delivery_method'] === 'delivery') {
+            if (! empty($validated['delivery_zone_id'])) {
+                $zone = DeliveryZone::active()->find($validated['delivery_zone_id']);
+            }
+            $deliveryFee = $zone ? (float) $zone->fee : 1500.0;
+        } else {
+            $deliveryFee = 0.0;
+        }
 
-        $order = DB::transaction(function () use ($validated, $deliveryFee) {
+        $order = DB::transaction(function () use ($validated, $deliveryFee, $zone) {
             $customer = Customer::firstOrNew(['phone' => $validated['customer_phone']]);
             $customer->fill([
                 'name' => $validated['customer_name'],
@@ -88,6 +99,7 @@ class OrderController extends Controller
                 'address_state' => $validated['address_state'] ?? null,
                 'address_district' => $validated['address_district'] ?? null,
                 'address_details' => $validated['address_details'] ?? null,
+                'delivery_zone_id' => $zone?->id,
                 'delivery_method' => $validated['delivery_method'],
                 'payment_method' => $validated['payment_method'],
                 'status' => 'new',
@@ -106,6 +118,19 @@ class OrderController extends Controller
 
             foreach ($itemsToCreate as $item) {
                 OrderItem::create([...$item, 'order_id' => $order->id]);
+                $product = Product::find($item['product_id']);
+                if ($product) {
+                    StockMovement::record(
+                        $product,
+                        'out',
+                        'sale',
+                        (int) $item['quantity'],
+                        null,
+                        'order',
+                        $order->id,
+                        'طلب '.$order->order_number,
+                    );
+                }
             }
 
             $customer->increment('total_orders');

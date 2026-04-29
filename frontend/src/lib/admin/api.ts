@@ -470,3 +470,89 @@ export const updateRolePermissions = (role: string, permissions: string[]) =>
     method: 'PUT',
     body: JSON.stringify({ permissions }),
   });
+
+// Inventory
+export type StockMovement = {
+  id: number;
+  type: 'in' | 'out' | 'adjustment';
+  reason: 'sale' | 'return' | 'restock' | 'damage' | 'manual';
+  quantity: number;
+  stock_after: number;
+  reference_type: string | null;
+  reference_id: number | null;
+  notes: string | null;
+  created_at: string;
+  product: { id: number; slug: string; name_ar: string; name_en: string } | null;
+  user: { id: number; name: string } | null;
+};
+export type InventoryStats = { total_products: number; low_stock: number; out_of_stock: number; total_stock_units: number };
+
+export const listStockMovements = (params: Record<string, string | number> = {}) => {
+  const query = new URLSearchParams(params as Record<string, string>).toString();
+  return request<{ data: StockMovement[]; meta: { total: number; per_page: number; current_page: number; last_page: number }; stats: InventoryStats }>(
+    `/admin/inventory/movements${query ? `?${query}` : ''}`,
+  );
+};
+export type LowStockProduct = { id: number; slug: string; name_ar: string; name_en: string; stock: number; price: number; unit_ar: string | null };
+export const listLowStock = (threshold = 10) =>
+  request<{ data: LowStockProduct[]; threshold: number }>(`/admin/inventory/low-stock?threshold=${threshold}`);
+export const adjustStock = (body: { product_id: number; type: 'in' | 'out' | 'adjustment'; reason: string; quantity: number; notes?: string }) =>
+  request<{ data: StockMovement }>('/admin/inventory/adjust', { method: 'POST', body: JSON.stringify(body) });
+
+// Delivery zones
+export type DeliveryZone = {
+  id: number;
+  name_ar: string;
+  name_en: string | null;
+  fee: number;
+  estimated_minutes: number;
+  is_active: boolean;
+  sort_order: number;
+  notes: string | null;
+  orders_count: number;
+};
+export const listDeliveryZones = () => request<{ data: DeliveryZone[] }>('/admin/delivery/zones');
+export const createDeliveryZone = (body: Record<string, unknown>) =>
+  request<{ data: DeliveryZone }>('/admin/delivery/zones', { method: 'POST', body: JSON.stringify(body) });
+export const updateDeliveryZone = (id: number, body: Record<string, unknown>) =>
+  request<{ data: DeliveryZone }>(`/admin/delivery/zones/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+export const deleteDeliveryZone = (id: number) =>
+  request<{ data: { ok: boolean } }>(`/admin/delivery/zones/${id}`, { method: 'DELETE' });
+
+// Drivers
+export type AdminDriver = {
+  id: number;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  is_active: boolean;
+  last_login_at: string | null;
+  profile: {
+    availability: 'available' | 'on_delivery' | 'off_duty';
+    vehicle: string | null;
+    vehicle_plate: string | null;
+    national_id: string | null;
+    completed_orders: number;
+    rating: number;
+    zone: { id: number; name_ar: string; name_en: string | null } | null;
+  } | null;
+};
+export type DriverStats = { total: number; available: number; on_delivery: number; off_duty: number; in_progress_orders: number };
+
+export const listDrivers = (params: Record<string, string | number> = {}) => {
+  const query = new URLSearchParams(params as Record<string, string>).toString();
+  return request<{ data: AdminDriver[]; meta: { total: number; per_page: number; current_page: number; last_page: number }; stats: DriverStats }>(
+    `/admin/delivery/drivers${query ? `?${query}` : ''}`,
+  );
+};
+export const createDriver = (body: Record<string, unknown>) =>
+  request<{ data: AdminDriver }>('/admin/delivery/drivers', { method: 'POST', body: JSON.stringify(body) });
+export const updateDriver = (id: number, body: Record<string, unknown>) =>
+  request<{ data: AdminDriver }>(`/admin/delivery/drivers/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+export const deleteDriver = (id: number) =>
+  request<{ data: { ok: boolean } }>(`/admin/delivery/drivers/${id}`, { method: 'DELETE' });
+export const assignDriver = (orderId: number, driverId: number) =>
+  request<{ data: { ok: boolean; order_id: number; driver_id: number } }>(`/admin/orders/${orderId}/assign-driver`, {
+    method: 'POST',
+    body: JSON.stringify({ driver_id: driverId }),
+  });

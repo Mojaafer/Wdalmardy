@@ -4,7 +4,13 @@ import { useEffect, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { Link } from '@/i18n/routing';
 import { useCart } from '@/lib/cart';
-import { createOrder, validateCoupon, type CouponValidation } from '@/lib/api';
+import {
+  createOrder,
+  validateCoupon,
+  getDeliveryZones,
+  type CouponValidation,
+  type DeliveryZone,
+} from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import { ProductImage } from '@/components/ProductImage';
 import { Truck, Store, MessageCircle, Banknote, Lock, ShieldCheck, ArrowLeft } from 'lucide-react';
@@ -47,10 +53,19 @@ export default function CheckoutPage() {
   const [coupon, setCoupon] = useState<CouponValidation | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [zones, setZones] = useState<DeliveryZone[]>([]);
+  const [zoneId, setZoneId] = useState<number | ''>('');
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    getDeliveryZones()
+      .then((r) => setZones(r.data))
+      .catch(() => setZones([]));
+  }, []);
 
-  const baseDeliveryFee = delivery === 'delivery' ? 1500 : 0;
+  const selectedZone = zones.find((z) => z.id === zoneId) ?? null;
+  const baseDeliveryFee =
+    delivery === 'delivery' ? (selectedZone ? selectedZone.fee : 1500) : 0;
   const deliveryFee = coupon?.free_shipping ? 0 : baseDeliveryFee;
   const discount = coupon ? coupon.discount : 0;
   const subtotalAfterDiscount = coupon?.free_shipping
@@ -133,6 +148,7 @@ export default function CheckoutPage() {
         payment_method: payment,
         notes: notes || undefined,
         coupon_code: coupon?.code,
+        delivery_zone_id: delivery === 'delivery' && zoneId ? Number(zoneId) : undefined,
         items: items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
       });
       const order = res.data;
@@ -211,6 +227,22 @@ export default function CheckoutPage() {
                   />
                 </Field>
               </div>
+              {zones.length > 0 && (
+                <Field label={t('checkout.delivery_zone')}>
+                  <select
+                    className="input"
+                    value={zoneId}
+                    onChange={(e) => setZoneId(e.target.value ? Number(e.target.value) : '')}
+                  >
+                    <option value="">{t('checkout.delivery_zone_placeholder')}</option>
+                    {zones.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {(locale === 'ar' ? z.name_ar : (z.name_en ?? z.name_ar))} — {formatPrice(z.fee, locale)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
               <Field label={t('checkout.address_details')}>
                 <textarea
                   required
@@ -232,7 +264,7 @@ export default function CheckoutPage() {
                 Icon={Truck}
                 title={t('checkout.delivery')}
                 sub={t('checkout.delivery_sub')}
-                badge={`1500 ${t('common.currency')}`}
+                badge={selectedZone ? formatPrice(selectedZone.fee, locale) : `1500 ${t('common.currency')}`}
                 badgeColor="text-brand-orange"
               />
               <RadioCard

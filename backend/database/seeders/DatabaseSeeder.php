@@ -79,5 +79,6 @@ class DatabaseSeeder extends Seeder
 
         $this->call(AdminSeeder::class);
         $this->call(PhaseBSeeder::class);
+        $this->call(PhaseB2Seeder::class);
     }
 }
