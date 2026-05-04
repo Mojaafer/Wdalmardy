@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Phone, MessageCircle, Mail, MapPin } from 'lucide-react';
+import ContactForm from './ContactForm';
 
 export default async function ContactPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -20,21 +21,28 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
         <p className="text-sm text-gray-500 mt-2 max-w-xl mx-auto">{t('contact.subtitle')}</p>
       </div>
 
-      <div className="card p-6 max-w-2xl mx-auto">
-        <h3 className="font-extrabold mb-4">{t('contact.info_title')}</h3>
-        <ul className="space-y-4">
-          {items.map(({ Icon, label, value }) => (
-            <li key={label} className="flex items-center gap-3 border-b border-gray-100 pb-3 last:border-0">
-              <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-cream-100 text-brand-orange">
-                <Icon className="h-5 w-5" />
-              </span>
-              <div>
-                <div className="text-xs text-gray-500">{label}</div>
-                <div className="font-semibold text-sm">{value}</div>
-              </div>
-            </li>
-          ))}
-        </ul>
+      <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div className="card p-6">
+          <h3 className="font-extrabold mb-4">{t('contact.info_title')}</h3>
+          <ul className="space-y-4">
+            {items.map(({ Icon, label, value }) => (
+              <li key={label} className="flex items-center gap-3 border-b border-gray-100 pb-3 last:border-0">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-cream-100 text-brand-orange">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div>
+                  <div className="text-xs text-gray-500">{label}</div>
+                  <div className="font-semibold text-sm">{value}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="card p-6">
+          <h3 className="font-extrabold mb-4">أرسل لنا رسالة</h3>
+          <ContactForm />
+        </div>
       </div>
     </div>
   );

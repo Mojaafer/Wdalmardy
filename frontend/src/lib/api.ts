@@ -181,3 +181,38 @@ export type CreateOrderResponse = {
 export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResponse> {
   return request('/orders', { method: 'POST', body: JSON.stringify(input) });
 }
+
+export type StorefrontPage = {
+  slug: string;
+  title_ar: string;
+  title_en: string | null;
+  body_ar: string | null;
+  body_en: string | null;
+  meta_description: string | null;
+};
+
+export async function getPage(slug: string): Promise<{ data: StorefrontPage } | null> {
+  try {
+    return await request<{ data: StorefrontPage }>(`/pages/${slug}`);
+  } catch {
+    return null;
+  }
+}
+
+export async function listPages(): Promise<{ data: Pick<StorefrontPage, 'slug' | 'title_ar' | 'title_en' | 'meta_description'>[] }> {
+  return request<{ data: Pick<StorefrontPage, 'slug' | 'title_ar' | 'title_en' | 'meta_description'>[] }>('/pages');
+}
+
+export async function submitContactMessage(input: {
+  name: string;
+  phone?: string;
+  email?: string;
+  subject?: string;
+  body: string;
+  order_number?: string;
+}): Promise<{ data: { id: number; received: boolean } }> {
+  return request<{ data: { id: number; received: boolean } }>('/messages', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}

@@ -9,12 +9,13 @@ import {
   downloadInvoice,
   listDrivers,
   assignDriver,
+  generateInvoice,
   type AdminOrder,
   type AdminDriver,
 } from '@/lib/admin/api';
 import { fmtSDG, fmtDate, STATUS_LABELS, STATUS_COLORS } from '@/lib/admin/format';
 import PageHeader from '@/components/admin/PageHeader';
-import { Search, MessageCircle, Printer, ShoppingBag, MapPin, Truck } from 'lucide-react';
+import { Search, MessageCircle, Printer, ShoppingBag, MapPin, Truck, Receipt } from 'lucide-react';
 
 const STATUSES: { value: string; label: string }[] = [
   { value: '', label: 'الكل' },
@@ -321,6 +322,25 @@ export default function AdminOrdersPage() {
                     طباعة الفاتورة
                   </button>
                 </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      const r = await generateInvoice(selected.id);
+                      alert(
+                        r.created
+                          ? `تم إنشاء فاتورة ${r.data.invoice_number}`
+                          : `الفاتورة موجودة بالفعل: ${r.data.invoice_number}`,
+                      );
+                      window.location.href = '/admin/invoices';
+                    } catch {
+                      alert('فشل إنشاء الفاتورة');
+                    }
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 rounded-lg text-sm"
+                >
+                  <Receipt className="w-4 h-4" />
+                  إنشاء فاتورة محاسبية
+                </button>
               </div>
             </div>
           )}

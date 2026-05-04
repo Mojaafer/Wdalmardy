@@ -51,19 +51,19 @@ export function Footer() {
               </Link>
             </li>
             <li>
-              <a href="#" className="hover:text-white">
+              <Link href="/p/terms" className="hover:text-white">
                 {t('footer.terms')}
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#" className="hover:text-white">
+              <Link href="/p/privacy" className="hover:text-white">
                 {t('footer.privacy')}
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#" className="hover:text-white">
+              <Link href="/p/faq" className="hover:text-white">
                 {t('footer.faq')}
-              </a>
+              </Link>
             </li>
           </ul>
         </div>

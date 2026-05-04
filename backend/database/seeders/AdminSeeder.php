@@ -26,6 +26,9 @@ class AdminSeeder extends Seeder
             'employees.view', 'employees.manage',
             'inventory.view', 'inventory.manage',
             'delivery.view', 'delivery.manage',
+            'pages.view', 'pages.manage',
+            'messages.view', 'messages.manage',
+            'invoices.view', 'invoices.manage',
             'reports.view',
             'settings.manage',
             'users.manage',
@@ -45,6 +48,7 @@ class AdminSeeder extends Seeder
             'customers.view',
             'suppliers.view',
             'inventory.view',
+            'invoices.view', 'invoices.manage',
             'reports.view',
         ]);
 
@@ -65,6 +69,8 @@ class AdminSeeder extends Seeder
             'offers.view',
             'suppliers.view',
             'inventory.view', 'inventory.manage',
+            'messages.view', 'messages.manage',
+            'invoices.view',
         ]);
 
         $user = User::updateOrCreate(

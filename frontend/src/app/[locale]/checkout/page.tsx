@@ -211,7 +211,7 @@ export default function CheckoutPage() {
                   <select required className="input" value={state} onChange={(e) => setState(e.target.value)}>
                     <option value="">{t('checkout.state_placeholder')}</option>
                     {SUDAN_STATES.map((s) => (
-                      <option key={s.en} value={s.en}>
+                      <option key={s.en} value={locale === 'ar' ? s.ar : s.en}>
                         {locale === 'ar' ? s.ar : s.en}
                       </option>
                     ))}

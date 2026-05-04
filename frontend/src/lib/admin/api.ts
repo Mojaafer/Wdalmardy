@@ -556,3 +556,153 @@ export const assignDriver = (orderId: number, driverId: number) =>
     method: 'POST',
     body: JSON.stringify({ driver_id: driverId }),
   });
+
+// Pages CMS
+export type AdminPage = {
+  id: number;
+  slug: string;
+  title_ar: string;
+  title_en: string | null;
+  body_ar: string | null;
+  body_en: string | null;
+  meta_description: string | null;
+  is_published: boolean;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type PageStats = { total: number; published: number; draft: number };
+export const listPages = (params: Record<string, string | number> = {}) => {
+  const query = new URLSearchParams(params as Record<string, string>).toString();
+  return request<{ data: AdminPage[]; meta: PageStats }>(`/admin/pages${query ? `?${query}` : ''}`);
+};
+export const createPage = (body: Record<string, unknown>) =>
+  request<{ data: AdminPage }>('/admin/pages', { method: 'POST', body: JSON.stringify(body) });
+export const updatePage = (id: number, body: Record<string, unknown>) =>
+  request<{ data: AdminPage }>(`/admin/pages/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+export const deletePage = (id: number) =>
+  request<{ data: { deleted: boolean } }>(`/admin/pages/${id}`, { method: 'DELETE' });
+
+// Messages / Support
+export type AdminMessageReply = {
+  id: number;
+  body: string;
+  channel: 'note' | 'whatsapp' | 'email';
+  created_at: string;
+  user: { id: number; name: string } | null;
+};
+export type AdminMessage = {
+  id: number;
+  subject: string | null;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  body: string;
+  source: 'contact_form' | 'manual' | 'whatsapp' | 'order';
+  status: 'new' | 'open' | 'replied' | 'closed';
+  order_id: number | null;
+  assigned_to: number | null;
+  replied_at: string | null;
+  created_at: string;
+  order?: { id: number; order_number: string } | null;
+  assignee?: { id: number; name: string } | null;
+  replies?: AdminMessageReply[];
+};
+export type MessageStats = { total: number; new: number; open: number; replied: number; closed: number };
+export const listMessages = (params: Record<string, string | number> = {}) => {
+  const query = new URLSearchParams(params as Record<string, string>).toString();
+  return request<{ data: AdminMessage[]; meta: MessageStats }>(`/admin/messages${query ? `?${query}` : ''}`);
+};
+export const getMessage = (id: number) =>
+  request<{ data: AdminMessage }>(`/admin/messages/${id}`);
+export const replyMessage = (id: number, body: string, channel: 'note' | 'whatsapp' | 'email' = 'note', markReplied = false) =>
+  request<{ data: AdminMessage }>(`/admin/messages/${id}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ body, channel, mark_replied: markReplied }),
+  });
+export const updateMessageStatus = (id: number, status: AdminMessage['status']) =>
+  request<{ data: AdminMessage }>(`/admin/messages/${id}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status }),
+  });
+export const deleteMessage = (id: number) =>
+  request<{ data: { deleted: boolean } }>(`/admin/messages/${id}`, { method: 'DELETE' });
+
+// Invoices
+export type InvoiceItem = {
+  id: number;
+  product_id: number | null;
+  product_name: string;
+  product_unit: string | null;
+  unit_price: string | number;
+  quantity: number;
+  line_total: string | number;
+};
+export type AdminInvoice = {
+  id: number;
+  invoice_number: string;
+  order_id: number | null;
+  customer_id: number | null;
+  customer_name: string;
+  customer_phone: string | null;
+  customer_email: string | null;
+  customer_address: string | null;
+  subtotal: string | number;
+  discount_amount: string | number;
+  delivery_fee: string | number;
+  total: string | number;
+  status: 'draft' | 'issued' | 'paid' | 'cancelled' | 'refunded';
+  payment_method: 'cod' | 'whatsapp' | 'cash' | 'transfer' | 'other';
+  issued_at: string | null;
+  paid_at: string | null;
+  notes: string | null;
+  created_at: string;
+  order?: { id: number; order_number: string; status?: string } | null;
+  items?: InvoiceItem[];
+  creator?: { id: number; name: string } | null;
+};
+export type InvoiceStats = {
+  count: number;
+  issued: number;
+  paid: number;
+  cancelled: number;
+  total_value: number;
+  paid_value: number;
+};
+export const listInvoices = (params: Record<string, string | number> = {}) => {
+  const query = new URLSearchParams(params as Record<string, string>).toString();
+  return request<{
+    data: AdminInvoice[];
+    meta: InvoiceStats & { current_page: number; last_page: number; per_page: number; total: number };
+  }>(`/admin/invoices${query ? `?${query}` : ''}`);
+};
+export const getInvoice = (id: number) =>
+  request<{ data: AdminInvoice }>(`/admin/invoices/${id}`);
+export const generateInvoice = (orderId: number, paymentMethod?: string) =>
+  request<{ data: AdminInvoice; created: boolean }>(`/admin/orders/${orderId}/invoice`, {
+    method: 'POST',
+    body: JSON.stringify({ payment_method: paymentMethod ?? null }),
+  });
+export const updateInvoiceStatus = (id: number, status: AdminInvoice['status'], notes?: string) =>
+  request<{ data: AdminInvoice }>(`/admin/invoices/${id}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status, notes }),
+  });
+export const getInvoiceWhatsappUrl = (id: number) =>
+  request<{ data: { whatsapp_url: string | null } }>(`/admin/invoices/${id}/whatsapp`);
+export async function downloadInvoicePdf(id: number, filename: string) {
+  const token = getToken();
+  const res = await fetch(`${API_URL}/admin/invoices/${id}/pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new AdminApiError('Failed to download PDF', res.status);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

@@ -9,15 +9,20 @@ use App\Http\Controllers\Api\Admin\DeliveryZoneAdminController;
 use App\Http\Controllers\Api\Admin\DriverAdminController;
 use App\Http\Controllers\Api\Admin\EmployeeAdminController;
 use App\Http\Controllers\Api\Admin\InventoryAdminController;
+use App\Http\Controllers\Api\Admin\InvoiceAdminController;
+use App\Http\Controllers\Api\Admin\MessageAdminController;
 use App\Http\Controllers\Api\Admin\OfferAdminController;
 use App\Http\Controllers\Api\Admin\OrderAdminController;
+use App\Http\Controllers\Api\Admin\PageAdminController;
 use App\Http\Controllers\Api\Admin\ProductAdminController;
 use App\Http\Controllers\Api\Admin\SupplierAdminController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\DeliveryZoneController;
+use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PageController;
 use App\Http\Controllers\Api\ProductController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +41,9 @@ Route::post('/orders', [OrderController::class, 'store']);
 Route::get('/offers/active', [OfferController::class, 'active']);
 Route::post('/coupons/validate', [CouponController::class, 'validate']);
 Route::get('/delivery-zones', [DeliveryZoneController::class, 'index']);
+Route::get('/pages', [PageController::class, 'index']);
+Route::get('/pages/{slug}', [PageController::class, 'show']);
+Route::post('/messages', [MessageController::class, 'store']);
 
 // Admin auth
 Route::post('/admin/login', [AuthController::class, 'login']);
@@ -152,5 +160,38 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::put('/delivery/drivers/{driver}', [DriverAdminController::class, 'update']);
         Route::delete('/delivery/drivers/{driver}', [DriverAdminController::class, 'destroy']);
         Route::post('/orders/{order}/assign-driver', [DriverAdminController::class, 'assignDriver']);
+    });
+
+    Route::middleware('permission:pages.view')->group(function () {
+        Route::get('/pages', [PageAdminController::class, 'index']);
+        Route::get('/pages/{page}', [PageAdminController::class, 'show']);
+    });
+    Route::middleware('permission:pages.manage')->group(function () {
+        Route::post('/pages', [PageAdminController::class, 'store']);
+        Route::put('/pages/{page}', [PageAdminController::class, 'update']);
+        Route::delete('/pages/{page}', [PageAdminController::class, 'destroy']);
+    });
+
+    Route::middleware('permission:messages.view')->group(function () {
+        Route::get('/messages', [MessageAdminController::class, 'index']);
+        Route::get('/messages/{message}', [MessageAdminController::class, 'show']);
+    });
+    Route::middleware('permission:messages.manage')->group(function () {
+        Route::post('/messages/{message}/reply', [MessageAdminController::class, 'reply']);
+        Route::post('/messages/{message}/status', [MessageAdminController::class, 'updateStatus']);
+        Route::post('/messages/{message}/assign', [MessageAdminController::class, 'assign']);
+        Route::delete('/messages/{message}', [MessageAdminController::class, 'destroy']);
+    });
+
+    Route::middleware('permission:invoices.view')->group(function () {
+        Route::get('/invoices', [InvoiceAdminController::class, 'index']);
+        Route::get('/invoices/{invoice}', [InvoiceAdminController::class, 'show']);
+        Route::get('/invoices/{invoice}/pdf', [InvoiceAdminController::class, 'pdf']);
+        Route::get('/invoices/{invoice}/whatsapp', [InvoiceAdminController::class, 'whatsappLink']);
+    });
+    Route::middleware('permission:invoices.manage')->group(function () {
+        Route::post('/orders/{order}/invoice', [InvoiceAdminController::class, 'generate']);
+        Route::post('/invoices/{invoice}/status', [InvoiceAdminController::class, 'updateStatus']);
+        Route::delete('/invoices/{invoice}', [InvoiceAdminController::class, 'destroy']);
     });
 });
