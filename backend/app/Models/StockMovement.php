@@ -63,7 +63,7 @@ class StockMovement extends Model
         $product->stock = max(0, (int) $product->stock + $delta);
         $product->save();
 
-        return static::create([
+        $movement = static::create([
             'product_id' => $product->id,
             'type' => $type,
             'reason' => $reason,
@@ -74,5 +74,18 @@ class StockMovement extends Model
             'user_id' => $userId,
             'notes' => $notes,
         ]);
+
+        $threshold = (int) (Setting::get('low_stock_threshold', 10) ?? 10);
+        if ($delta < 0 && $product->stock <= $threshold) {
+            AdminNotification::fire(
+                type: 'low_stock',
+                title: 'تنبيه نفاد مخزون',
+                body: ($product->name_ar ?? $product->name_en ?? '').' — متبقي '.$product->stock,
+                payload: ['product_id' => $product->id, 'stock' => (int) $product->stock, 'threshold' => $threshold],
+                link: '/admin/inventory',
+            );
+        }
+
+        return $movement;
     }
 }

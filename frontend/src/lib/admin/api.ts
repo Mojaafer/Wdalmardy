@@ -706,3 +706,92 @@ export async function downloadInvoicePdf(id: number, filename: string) {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+// Settings
+export type SettingValue = string | number | boolean | null | Record<string, unknown> | unknown[];
+export type AdminSetting = { value: SettingValue; type: string; group: string };
+export type SettingsCatalogEntry = { key: string; type: string; group: string; label: string };
+export const getSettings = () =>
+  request<{ data: Record<string, AdminSetting>; catalog: SettingsCatalogEntry[] }>(
+    '/admin/settings',
+  );
+export const updateSettings = (
+  settings: { key: string; value: SettingValue; type: string; group?: string }[],
+) =>
+  request<{ data: Record<string, AdminSetting>; catalog: SettingsCatalogEntry[] }>(
+    '/admin/settings',
+    { method: 'PUT', body: JSON.stringify({ settings }) },
+  );
+export async function downloadBackup(filename: string) {
+  const token = getToken();
+  const res = await fetch(`${API_URL}/admin/settings/backup`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new AdminApiError('Failed to download backup', res.status);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Reports
+export type ReportRange = '7d' | '30d' | '90d' | 'mtd' | 'ytd';
+export type ReportSummary = {
+  range: ReportRange | string;
+  from: string;
+  to: string;
+  totals: {
+    sales: number;
+    orders: number;
+    avg_order: number;
+    discount: number;
+    new_customers: number;
+    estimated_profit: number;
+  };
+  sales_by_day: { date: string; total: number; count: number }[];
+  top_products: { product_id: number; name: string; qty: number; revenue: number }[];
+  revenue_by_category: { category_id: number; name: string; revenue: number }[];
+  orders_by_status: Record<string, number>;
+  top_customers: {
+    customer_id: number;
+    name: string;
+    phone: string | null;
+    orders_count: number;
+    revenue: number;
+  }[];
+};
+export const getReportSummary = (range: ReportRange = '30d') =>
+  request<{ data: ReportSummary }>(`/admin/reports/summary?range=${range}`);
+
+// Notifications
+export type AdminNotificationItem = {
+  id: number;
+  type: 'order_new' | 'low_stock' | 'message_new' | 'supplier_order' | 'payment_received' | string;
+  title: string;
+  body: string | null;
+  payload: Record<string, unknown> | null;
+  link: string | null;
+  user_id: number | null;
+  read_at: string | null;
+  created_at: string;
+};
+export const listNotifications = (params: Record<string, string | number> = {}) => {
+  const query = new URLSearchParams(params as Record<string, string>).toString();
+  return request<{
+    data: AdminNotificationItem[];
+    meta: { total: number; unread: number };
+  }>(`/admin/notifications${query ? `?${query}` : ''}`);
+};
+export const getUnreadCount = () =>
+  request<{ unread: number }>('/admin/notifications/unread-count');
+export const markNotificationRead = (id: number) =>
+  request<{ data: AdminNotificationItem }>(`/admin/notifications/${id}/read`, { method: 'POST' });
+export const markAllNotificationsRead = () =>
+  request<{ data: { marked_read: number } }>('/admin/notifications/read-all', { method: 'POST' });
+export const deleteNotification = (id: number) =>
+  request<{ data: { deleted: boolean } }>(`/admin/notifications/${id}`, { method: 'DELETE' });

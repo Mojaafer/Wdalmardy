@@ -52,9 +52,9 @@ export default function Sidebar({ user }: { user: AdminUser }) {
       { href: '/admin/invoices', label: 'الفواتير', icon: Receipt, permission: 'invoices.view' },
       { href: '/admin/messages', label: 'الرسائل والدعم', icon: Inbox, permission: 'messages.view' },
       { href: '/admin/pages', label: 'الصفحات', icon: FileText, permission: 'pages.view' },
-      { href: '/admin/reports', label: 'التقارير', icon: BarChart3, permission: 'reports.view', comingSoon: true },
+      { href: '/admin/reports', label: 'التقارير', icon: BarChart3, permission: 'reports.view' },
       { href: '/admin/permissions', label: 'صلاحيات المدير', icon: ShieldCheck, permission: 'employees.manage' },
-      { href: '/admin/settings', label: 'إعدادات النظام', icon: Settings, permission: 'settings.manage', comingSoon: true },
+      { href: '/admin/settings', label: 'إعدادات النظام', icon: Settings, permission: 'settings.manage' },
     ],
     [],
   );

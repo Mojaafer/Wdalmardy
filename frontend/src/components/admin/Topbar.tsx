@@ -1,10 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Bell, LogOut, ExternalLink, Menu } from 'lucide-react';
+import { LogOut, ExternalLink, Menu } from 'lucide-react';
 import type { AdminUser } from '@/lib/admin/api';
 import { logout, clearSession } from '@/lib/admin/api';
 import { ROLE_LABELS } from '@/lib/admin/format';
+import NotificationBell from './NotificationBell';
 
 export default function Topbar({
   user,
@@ -49,13 +50,7 @@ export default function Topbar({
         فتح المتجر
       </a>
 
-      <button
-        className="p-2 rounded hover:bg-slate-100 text-slate-600 relative"
-        aria-label="الإشعارات"
-      >
-        <Bell className="w-5 h-5" />
-        <span className="absolute top-1 left-1 w-2 h-2 rounded-full bg-[#F26B2B]" />
-      </button>
+      <NotificationBell />
 
       <div className="flex items-center gap-3 pr-3 border-r border-slate-200">
         <div className="w-9 h-9 rounded-full bg-[#FBEFE2] text-[#0E5C3A] grid place-items-center font-bold text-sm">

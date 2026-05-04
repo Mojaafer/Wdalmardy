@@ -11,10 +11,13 @@ use App\Http\Controllers\Api\Admin\EmployeeAdminController;
 use App\Http\Controllers\Api\Admin\InventoryAdminController;
 use App\Http\Controllers\Api\Admin\InvoiceAdminController;
 use App\Http\Controllers\Api\Admin\MessageAdminController;
+use App\Http\Controllers\Api\Admin\NotificationAdminController;
 use App\Http\Controllers\Api\Admin\OfferAdminController;
 use App\Http\Controllers\Api\Admin\OrderAdminController;
 use App\Http\Controllers\Api\Admin\PageAdminController;
 use App\Http\Controllers\Api\Admin\ProductAdminController;
+use App\Http\Controllers\Api\Admin\ReportsAdminController;
+use App\Http\Controllers\Api\Admin\SettingAdminController;
 use App\Http\Controllers\Api\Admin\SupplierAdminController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CouponController;
@@ -24,6 +27,7 @@ use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PageController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\SettingController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +48,7 @@ Route::get('/delivery-zones', [DeliveryZoneController::class, 'index']);
 Route::get('/pages', [PageController::class, 'index']);
 Route::get('/pages/{slug}', [PageController::class, 'show']);
 Route::post('/messages', [MessageController::class, 'store']);
+Route::get('/settings', [SettingController::class, 'public_index']);
 
 // Admin auth
 Route::post('/admin/login', [AuthController::class, 'login']);
@@ -194,4 +199,21 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::post('/invoices/{invoice}/status', [InvoiceAdminController::class, 'updateStatus']);
         Route::delete('/invoices/{invoice}', [InvoiceAdminController::class, 'destroy']);
     });
+
+    Route::middleware('permission:reports.view')->group(function () {
+        Route::get('/reports/summary', [ReportsAdminController::class, 'summary']);
+    });
+
+    Route::middleware('permission:settings.manage')->group(function () {
+        Route::get('/settings', [SettingAdminController::class, 'index']);
+        Route::put('/settings', [SettingAdminController::class, 'update']);
+        Route::get('/settings/backup', [SettingAdminController::class, 'backup']);
+    });
+
+    // Notifications: any authenticated admin can read their own
+    Route::get('/notifications', [NotificationAdminController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationAdminController::class, 'unreadCount']);
+    Route::post('/notifications/{notification}/read', [NotificationAdminController::class, 'markRead']);
+    Route::post('/notifications/read-all', [NotificationAdminController::class, 'markAllRead']);
+    Route::delete('/notifications/{notification}', [NotificationAdminController::class, 'destroy']);
 });

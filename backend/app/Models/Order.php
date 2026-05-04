@@ -13,6 +13,19 @@ class Order extends Model
 
     public const STATUSES = ['new', 'preparing', 'shipped', 'delivered', 'cancelled'];
 
+    protected static function booted(): void
+    {
+        static::created(function (Order $order) {
+            AdminNotification::fire(
+                type: 'order_new',
+                title: 'طلب جديد '.$order->order_number,
+                body: trim(($order->customer_name ?? '').' — '.number_format((float) $order->total).' ج.س'),
+                payload: ['order_id' => $order->id, 'order_number' => $order->order_number, 'total' => (float) $order->total],
+                link: '/admin/orders?focus='.$order->id,
+            );
+        });
+    }
+
     protected $fillable = [
         'order_number',
         'customer_id',

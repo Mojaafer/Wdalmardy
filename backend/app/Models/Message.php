@@ -5,12 +5,29 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Message extends Model
 {
     public const STATUSES = ['new', 'open', 'replied', 'closed'];
 
     public const SOURCES = ['contact_form', 'manual', 'whatsapp', 'order'];
+
+    protected static function booted(): void
+    {
+        static::created(function (Message $message) {
+            if ($message->source === 'manual') {
+                return; // admin-created notes shouldn't notify the admin
+            }
+            AdminNotification::fire(
+                type: 'message_new',
+                title: 'رسالة جديدة من '.($message->name ?: 'عميل'),
+                body: Str::limit($message->subject ?: $message->body, 80),
+                payload: ['message_id' => $message->id, 'subject' => $message->subject],
+                link: '/admin/messages?focus='.$message->id,
+            );
+        });
+    }
 
     protected $fillable = [
         'subject',

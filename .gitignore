@@ -43,3 +43,11 @@ build/
 # Local test plans / reports
 *-test-plan.md
 test-report-*.md
+
+# Test evidence (not committed)
+evidence-*.png
+test-evidence-*.png
+test-report.md
+phase-b*-test-report.md
+phase-b*-test-plan.md
+admin-phase-*-test-plan.md
