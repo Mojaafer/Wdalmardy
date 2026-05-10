@@ -180,10 +180,13 @@ class Order extends Model
             if ($redeemed > 0) {
                 // Refund: restore the spendable balance only — lifetime_points
                 // must NOT change, otherwise customers could climb tiers by
-                // looping redeem-then-cancel. Also clear points_discount so a
-                // re-delivery won't under-award points using stale data.
+                // looping redeem-then-cancel. We zero points_redeemed for
+                // idempotency. points_discount is left as-is so the order's
+                // historical `total` stays consistent (subtotal - discounts +
+                // fee). Re-delivering a cancelled order is blocked at the
+                // controller level, so the field is purely historical.
                 $customer->awardPoints($redeemed, 'refund', $this->id, 'إلغاء طلب '.$this->order_number, null, false);
-                $this->forceFill(['points_redeemed' => 0, 'points_discount' => 0])->saveQuietly();
+                $this->forceFill(['points_redeemed' => 0])->saveQuietly();
             }
             if ($earned > 0) {
                 $customer->awardPoints(-$earned, 'adjust', $this->id, 'إلغاء طلب '.$this->order_number);
