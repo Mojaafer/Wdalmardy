@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
@@ -51,7 +52,7 @@ class BarcodeAdminController extends Controller
         }
         $perPage = (int) $request->integer('per_page', 50);
 
-        return response()->json($query->orderBy('name_ar')->paginate($perPage));
+        return ProductResource::collection($query->orderBy('name_ar')->paginate($perPage));
     }
 
     /**
@@ -83,7 +84,7 @@ class BarcodeAdminController extends Controller
         }
         $product = Product::with('category')->where('barcode', $code)->first();
 
-        return response()->json(['data' => $product]);
+        return response()->json(['data' => $product ? new ProductResource($product) : null]);
     }
 
     /**

@@ -46,7 +46,13 @@ class OrderController extends Controller
         }
 
         $order = DB::transaction(function () use ($validated, $deliveryFee, $zone) {
-            $customer = Customer::firstOrNew(['phone' => $validated['customer_phone']]);
+            // Lock the customer row so two concurrent orders for the same phone
+            // (e.g. a redeem-points double-submit) can't both pass the balance
+            // check and apply the discount twice.
+            $customer = Customer::where('phone', $validated['customer_phone'])
+                ->lockForUpdate()
+                ->first()
+                ?? new Customer(['phone' => $validated['customer_phone']]);
             $customer->fill([
                 'name' => $validated['customer_name'],
                 'email' => $validated['customer_email'] ?? $customer->email,

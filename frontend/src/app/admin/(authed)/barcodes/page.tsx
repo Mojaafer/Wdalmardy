@@ -68,8 +68,9 @@ export default function BarcodesPage() {
   }
 
   function toggleAll() {
-    if (selected.size === items.length) setSelected(new Set());
-    else setSelected(new Set(items.filter((i) => i.barcode).map((i) => i.id)));
+    const selectable = items.filter((i) => i.barcode);
+    if (selected.size === selectable.length && selectable.length > 0) setSelected(new Set());
+    else setSelected(new Set(selectable.map((i) => i.id)));
   }
 
   function printSelected() {

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Customer extends Model
 {
@@ -63,16 +64,30 @@ class Customer extends Model
 
     /**
      * Award points to this customer (positive = earn, negative = redeem/adjust).
-     * Increments balance and (only for positive deltas) lifetime_points so that
-     * spending points doesn't downgrade tier.
+     * Uses an atomic UPDATE so concurrent orders cannot double-spend points:
+     * the balance is read+written in a single SQL statement that also clamps
+     * to zero. Lifetime points are only incremented on positive deltas so
+     * that spending points doesn't downgrade tier.
      */
     public function awardPoints(int $points, string $type, ?int $orderId = null, ?string $reason = null, ?int $userId = null): CustomerPointMovement
     {
-        $this->loyalty_points = max(0, (int) $this->loyalty_points + $points);
         if ($points > 0) {
-            $this->lifetime_points = (int) $this->lifetime_points + $points;
+            DB::table('customers')
+                ->where('id', $this->id)
+                ->update([
+                    'loyalty_points' => DB::raw('loyalty_points + '.(int) $points),
+                    'lifetime_points' => DB::raw('lifetime_points + '.(int) $points),
+                    'updated_at' => now(),
+                ]);
+        } else {
+            DB::table('customers')
+                ->where('id', $this->id)
+                ->update([
+                    'loyalty_points' => DB::raw('GREATEST(0, loyalty_points + ('.(int) $points.'))'),
+                    'updated_at' => now(),
+                ]);
         }
-        $this->save();
+        $this->refresh();
 
         return CustomerPointMovement::create([
             'customer_id' => $this->id,
@@ -80,7 +95,7 @@ class Customer extends Model
             'user_id' => $userId,
             'type' => $type,
             'points' => $points,
-            'balance_after' => $this->loyalty_points,
+            'balance_after' => (int) $this->loyalty_points,
             'reason' => $reason,
         ]);
     }
