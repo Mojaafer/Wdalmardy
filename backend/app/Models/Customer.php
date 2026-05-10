@@ -69,16 +69,19 @@ class Customer extends Model
      * to zero. Lifetime points are only incremented on positive deltas so
      * that spending points doesn't downgrade tier.
      */
-    public function awardPoints(int $points, string $type, ?int $orderId = null, ?string $reason = null, ?int $userId = null): CustomerPointMovement
+    public function awardPoints(int $points, string $type, ?int $orderId = null, ?string $reason = null, ?int $userId = null, bool $bumpLifetime = true): CustomerPointMovement
     {
         if ($points > 0) {
+            $update = [
+                'loyalty_points' => DB::raw('loyalty_points + '.(int) $points),
+                'updated_at' => now(),
+            ];
+            if ($bumpLifetime) {
+                $update['lifetime_points'] = DB::raw('lifetime_points + '.(int) $points);
+            }
             DB::table('customers')
                 ->where('id', $this->id)
-                ->update([
-                    'loyalty_points' => DB::raw('loyalty_points + '.(int) $points),
-                    'lifetime_points' => DB::raw('lifetime_points + '.(int) $points),
-                    'updated_at' => now(),
-                ]);
+                ->update($update);
         } else {
             DB::table('customers')
                 ->where('id', $this->id)

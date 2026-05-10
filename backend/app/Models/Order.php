@@ -171,7 +171,10 @@ class Order extends Model
         $redeemed = (int) $this->points_redeemed;
         $earned = (int) $this->points_earned;
         if ($redeemed > 0) {
-            $customer->awardPoints($redeemed, 'refund', $this->id, 'إلغاء طلب '.$this->order_number);
+            // Refund: restore the spendable balance only — lifetime_points
+            // must NOT change, otherwise customers could climb tiers by
+            // looping redeem-then-cancel.
+            $customer->awardPoints($redeemed, 'refund', $this->id, 'إلغاء طلب '.$this->order_number, null, false);
             $this->forceFill(['points_redeemed' => 0])->saveQuietly();
         }
         if ($earned > 0) {
