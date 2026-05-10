@@ -19,6 +19,9 @@ class Message extends Model
             if ($message->source === 'manual') {
                 return; // admin-created notes shouldn't notify the admin
             }
+            if (! Setting::get('notify_new_message', true)) {
+                return;
+            }
             AdminNotification::fire(
                 type: 'message_new',
                 title: 'رسالة جديدة من '.($message->name ?: 'عميل'),

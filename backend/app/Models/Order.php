@@ -16,6 +16,9 @@ class Order extends Model
     protected static function booted(): void
     {
         static::created(function (Order $order) {
+            if (! Setting::get('notify_new_order', true)) {
+                return;
+            }
             AdminNotification::fire(
                 type: 'order_new',
                 title: 'طلب جديد '.$order->order_number,

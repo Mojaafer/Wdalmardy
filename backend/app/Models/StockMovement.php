@@ -76,7 +76,7 @@ class StockMovement extends Model
         ]);
 
         $threshold = (int) (Setting::get('low_stock_threshold', 10) ?? 10);
-        if ($delta < 0 && $product->stock <= $threshold) {
+        if ($delta < 0 && $product->stock <= $threshold && Setting::get('notify_low_stock', true)) {
             AdminNotification::fire(
                 type: 'low_stock',
                 title: 'تنبيه نفاد مخزون',

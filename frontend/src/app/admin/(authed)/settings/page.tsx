@@ -223,6 +223,7 @@ function SettingField({
         <span className="text-sm font-semibold text-slate-700">{entry.label}</span>
         <button
           type="button"
+          dir="ltr"
           onClick={() => onChange(!value)}
           aria-pressed={Boolean(value)}
           className={[
@@ -233,7 +234,7 @@ function SettingField({
           <span
             className={[
               'inline-block h-5 w-5 rounded-full bg-white transition-transform',
-              value ? 'translate-x-1' : 'translate-x-5',
+              value ? 'translate-x-5' : 'translate-x-1',
             ].join(' ')}
           />
         </button>
