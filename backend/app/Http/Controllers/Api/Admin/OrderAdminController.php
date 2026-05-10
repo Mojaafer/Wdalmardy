@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Mpdf\Mpdf;
 
@@ -61,7 +62,9 @@ class OrderAdminController extends Controller
             'assigned_driver_id' => 'nullable|integer|exists:users,id',
         ]);
 
-        $order->update($validated);
+        DB::transaction(function () use ($order, $validated) {
+            $order->update($validated);
+        });
 
         return response()->json(['data' => $order->fresh(['items', 'driver:id,name'])]);
     }

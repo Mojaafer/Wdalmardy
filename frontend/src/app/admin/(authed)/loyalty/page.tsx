@@ -13,6 +13,7 @@ const TYPE_LABELS: Record<string, { label: string; cls: string }> = {
   earn: { label: 'كسب', cls: 'bg-emerald-100 text-emerald-700' },
   redeem: { label: 'استبدال', cls: 'bg-amber-100 text-amber-700' },
   adjust: { label: 'تعديل يدوي', cls: 'bg-sky-100 text-sky-700' },
+  refund: { label: 'استرداد', cls: 'bg-violet-100 text-violet-700' },
 };
 
 export default function LoyaltyPage() {

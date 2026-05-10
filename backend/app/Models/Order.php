@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Order extends Model
 {
@@ -144,8 +145,10 @@ class Order extends Model
         if (! $customer) {
             return 0;
         }
-        $customer->awardPoints($earned, 'earn', $this->id, 'طلب '.$this->order_number);
-        $this->forceFill(['points_earned' => $earned])->saveQuietly();
+        DB::transaction(function () use ($customer, $earned) {
+            $customer->awardPoints($earned, 'earn', $this->id, 'طلب '.$this->order_number);
+            $this->forceFill(['points_earned' => $earned])->saveQuietly();
+        });
 
         return $earned;
     }
@@ -170,17 +173,23 @@ class Order extends Model
         }
         $redeemed = (int) $this->points_redeemed;
         $earned = (int) $this->points_earned;
-        if ($redeemed > 0) {
-            // Refund: restore the spendable balance only — lifetime_points
-            // must NOT change, otherwise customers could climb tiers by
-            // looping redeem-then-cancel.
-            $customer->awardPoints($redeemed, 'refund', $this->id, 'إلغاء طلب '.$this->order_number, null, false);
-            $this->forceFill(['points_redeemed' => 0])->saveQuietly();
+        if ($redeemed === 0 && $earned === 0) {
+            return;
         }
-        if ($earned > 0) {
-            $customer->awardPoints(-$earned, 'adjust', $this->id, 'إلغاء طلب '.$this->order_number);
-            $this->forceFill(['points_earned' => 0])->saveQuietly();
-        }
+        DB::transaction(function () use ($customer, $redeemed, $earned) {
+            if ($redeemed > 0) {
+                // Refund: restore the spendable balance only — lifetime_points
+                // must NOT change, otherwise customers could climb tiers by
+                // looping redeem-then-cancel. Also clear points_discount so a
+                // re-delivery won't under-award points using stale data.
+                $customer->awardPoints($redeemed, 'refund', $this->id, 'إلغاء طلب '.$this->order_number, null, false);
+                $this->forceFill(['points_redeemed' => 0, 'points_discount' => 0])->saveQuietly();
+            }
+            if ($earned > 0) {
+                $customer->awardPoints(-$earned, 'adjust', $this->id, 'إلغاء طلب '.$this->order_number);
+                $this->forceFill(['points_earned' => 0])->saveQuietly();
+            }
+        });
     }
 
     public static function generateOrderNumber(): string
