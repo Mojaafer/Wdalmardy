@@ -21,6 +21,8 @@ import {
   FileText,
   Inbox,
   Receipt,
+  Barcode,
+  Award,
   type LucideIcon,
 } from 'lucide-react';
 import type { AdminUser } from '@/lib/admin/api';
@@ -48,6 +50,8 @@ export default function Sidebar({ user }: { user: AdminUser }) {
       { href: '/admin/suppliers', label: 'الموردين', icon: Building2, permission: 'suppliers.view' },
       { href: '/admin/employees', label: 'الموظفين', icon: UserCog, permission: 'employees.view' },
       { href: '/admin/inventory', label: 'إدارة المخزون', icon: Boxes, permission: 'inventory.view' },
+      { href: '/admin/barcodes', label: 'الباركود', icon: Barcode, permission: 'products.view' },
+      { href: '/admin/loyalty', label: 'برنامج الولاء', icon: Award, permission: 'customers.view' },
       { href: '/admin/delivery', label: 'إدارة التوصيل', icon: Truck, permission: 'delivery.view' },
       { href: '/admin/invoices', label: 'الفواتير', icon: Receipt, permission: 'invoices.view' },
       { href: '/admin/messages', label: 'الرسائل والدعم', icon: Inbox, permission: 'messages.view' },

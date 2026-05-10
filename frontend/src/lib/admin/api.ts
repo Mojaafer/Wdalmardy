@@ -135,6 +135,7 @@ export const getDashboard = () => request<{ data: DashboardData }>('/admin/dashb
 export type AdminProduct = {
   id: number;
   slug: string;
+  barcode: string | null;
   name: { ar: string; en: string };
   description: { ar: string; en: string };
   unit: { ar: string; en: string };
@@ -795,3 +796,93 @@ export const markAllNotificationsRead = () =>
   request<{ data: { marked_read: number } }>('/admin/notifications/read-all', { method: 'POST' });
 export const deleteNotification = (id: number) =>
   request<{ data: { deleted: boolean } }>(`/admin/notifications/${id}`, { method: 'DELETE' });
+
+// Barcodes
+export type BarcodeSummary = {
+  total_products: number;
+  with_barcode: number;
+  without_barcode: number;
+  duplicates: number;
+};
+export const getBarcodeSummary = () =>
+  request<{ data: BarcodeSummary }>('/admin/barcodes/summary');
+export const listBarcodes = (params: Record<string, string | number> = {}) => {
+  const qs = new URLSearchParams(
+    Object.entries(params).map(([k, v]) => [k, String(v)]),
+  ).toString();
+  return request<{
+    data: AdminProduct[];
+    meta: { current_page: number; last_page: number; total: number };
+    current_page?: number;
+    last_page?: number;
+    total?: number;
+  }>(`/admin/barcodes${qs ? `?${qs}` : ''}`);
+};
+export const generateMissingBarcodes = () =>
+  request<{ data: { generated: number } }>('/admin/barcodes/generate-missing', { method: 'POST' });
+export const lookupBarcode = (code: string) =>
+  request<{ data: AdminProduct | null }>(
+    `/admin/barcodes/lookup?code=${encodeURIComponent(code)}`,
+  );
+
+// Loyalty
+export type LoyaltyTier = {
+  key: 'bronze' | 'silver' | 'gold' | 'platinum' | string;
+  label: string;
+  min: number;
+  color: string;
+};
+export type LoyaltyCustomer = {
+  id: number;
+  name: string;
+  phone: string | null;
+  loyalty_points: number;
+  lifetime_points: number;
+  total_orders: number;
+  total_spent: number;
+  tier?: LoyaltyTier;
+};
+export type LoyaltyMovement = {
+  id: number;
+  customer_id: number;
+  order_id: number | null;
+  type: 'earn' | 'redeem' | 'adjust';
+  points: number;
+  balance_after: number;
+  reason: string | null;
+  created_at: string;
+  customer?: { id: number; name: string; phone: string | null };
+  order?: { id: number; order_number: string };
+};
+export type LoyaltyRules = {
+  earn_rate: number;
+  redeem_value: number;
+  redeem_cap_pct: number;
+};
+export type LoyaltySummary = {
+  tiers: (LoyaltyTier & { count: number })[];
+  leaderboard: LoyaltyCustomer[];
+  recent_movements: LoyaltyMovement[];
+  totals: {
+    customers: number;
+    total_lifetime_points: number;
+    outstanding_balance: number;
+    rules: LoyaltyRules;
+  };
+};
+export const getLoyaltySummary = () =>
+  request<{ data: LoyaltySummary }>('/admin/loyalty/summary');
+export const getLoyaltyCustomer = (customerId: number) =>
+  request<{
+    data: { customer: LoyaltyCustomer; movements: LoyaltyMovement[] };
+  }>(`/admin/loyalty/customers/${customerId}`);
+export const adjustCustomerPoints = (
+  customerId: number,
+  body: { points: number; reason: string },
+) =>
+  request<{
+    data: { movement: LoyaltyMovement; customer: LoyaltyCustomer };
+  }>(`/admin/loyalty/customers/${customerId}/adjust`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });

@@ -49,9 +49,10 @@ class CustomerAdminController extends Controller
 
     public function show(Customer $customer)
     {
-        return response()->json([
-            'data' => $customer->load(['orders' => fn ($q) => $q->latest()->limit(20)]),
-        ]);
+        $customer->load(['orders' => fn ($q) => $q->latest()->limit(20)]);
+        $customer->setAttribute('tier', $customer->tier());
+
+        return response()->json(['data' => $customer]);
     }
 
     public function store(Request $request)

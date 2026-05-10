@@ -88,7 +88,7 @@ export default function AdminProductsPage() {
             <Search className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="بحث بالاسم..."
+              placeholder="بحث بالاسم أو الباركود..."
               value={filters.q}
               onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value, page: 1 }))}
               className="w-full pr-9 pl-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#0E5C3A] focus:border-transparent outline-none"
@@ -286,6 +286,7 @@ function ProductForm({
     unit_ar: editing?.unit.ar ?? '',
     unit_en: editing?.unit.en ?? '',
     image: editing?.image ?? '',
+    barcode: editing?.barcode ?? '',
     price: editing?.price ?? 0,
     compare_at_price: editing?.compare_at_price ?? '',
     stock: editing?.stock ?? 0,
@@ -301,6 +302,7 @@ function ProductForm({
     setError(null);
     const payload = {
       ...form,
+      barcode: form.barcode?.trim() ? form.barcode.trim() : null,
       compare_at_price:
         form.compare_at_price === '' || form.compare_at_price === null
           ? null
@@ -387,6 +389,16 @@ function ProductForm({
           placeholder="https://..."
           dir="ltr"
           className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+        />
+      </Field>
+
+      <Field label="رقم الباركود (اختياري)">
+        <input
+          value={form.barcode ?? ''}
+          onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))}
+          placeholder="EAN-13 — اتركه فارغاً للتوليد التلقائي من شاشة الباركود"
+          dir="ltr"
+          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono"
         />
       </Field>
 

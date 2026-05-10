@@ -7,6 +7,7 @@ use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ProductAdminController extends Controller
 {
@@ -14,11 +15,16 @@ class ProductAdminController extends Controller
     {
         $query = Product::query()->with('category');
 
+        if ($barcode = $request->string('barcode')->toString()) {
+            $query->where('barcode', $barcode);
+        }
+
         if ($q = $request->string('q')->toString()) {
             $query->where(function ($w) use ($q) {
                 $w->where('name_ar', 'like', "%$q%")
                     ->orWhere('name_en', 'like', "%$q%")
-                    ->orWhere('slug', 'like', "%$q%");
+                    ->orWhere('slug', 'like', "%$q%")
+                    ->orWhere('barcode', 'like', "%$q%");
             });
         }
 
@@ -85,9 +91,18 @@ class ProductAdminController extends Controller
 
     private function validatedData(Request $request, ?int $ignoreId = null): array
     {
-        return $request->validate([
+        $rules = [
             'category_id' => 'required|integer|exists:categories,id',
             'slug' => 'nullable|string|max:160',
+            'barcode' => [
+                'nullable',
+                'string',
+                'max:32',
+                'regex:/^[0-9A-Za-z-]+$/',
+                $ignoreId
+                    ? Rule::unique('products', 'barcode')->ignore($ignoreId)
+                    : Rule::unique('products', 'barcode'),
+            ],
             'name_ar' => 'required|string|max:160',
             'name_en' => 'required|string|max:160',
             'description_ar' => 'nullable|string',
@@ -100,7 +115,9 @@ class ProductAdminController extends Controller
             'stock' => 'required|integer|min:0',
             'is_featured' => 'sometimes|boolean',
             'is_active' => 'sometimes|boolean',
-        ]);
+        ];
+
+        return $request->validate($rules);
     }
 
     private function uniqueSlug(string $base, ?int $ignoreId = null): string

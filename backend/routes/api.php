@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AuthController;
+use App\Http\Controllers\Api\Admin\BarcodeAdminController;
 use App\Http\Controllers\Api\Admin\CategoryAdminController;
 use App\Http\Controllers\Api\Admin\CouponAdminController;
 use App\Http\Controllers\Api\Admin\CustomerAdminController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Api\Admin\DriverAdminController;
 use App\Http\Controllers\Api\Admin\EmployeeAdminController;
 use App\Http\Controllers\Api\Admin\InventoryAdminController;
 use App\Http\Controllers\Api\Admin\InvoiceAdminController;
+use App\Http\Controllers\Api\Admin\LoyaltyAdminController;
 use App\Http\Controllers\Api\Admin\MessageAdminController;
 use App\Http\Controllers\Api\Admin\NotificationAdminController;
 use App\Http\Controllers\Api\Admin\OfferAdminController;
@@ -202,6 +204,25 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
 
     Route::middleware('permission:reports.view')->group(function () {
         Route::get('/reports/summary', [ReportsAdminController::class, 'summary']);
+    });
+
+    // Barcode management — reuses products.* permissions
+    Route::middleware('permission:products.view')->group(function () {
+        Route::get('/barcodes/summary', [BarcodeAdminController::class, 'summary']);
+        Route::get('/barcodes', [BarcodeAdminController::class, 'index']);
+        Route::get('/barcodes/lookup', [BarcodeAdminController::class, 'lookup']);
+    });
+    Route::middleware('permission:products.manage')->group(function () {
+        Route::post('/barcodes/generate-missing', [BarcodeAdminController::class, 'generateMissing']);
+    });
+
+    // Loyalty — reuses customers.* permissions
+    Route::middleware('permission:customers.view')->group(function () {
+        Route::get('/loyalty/summary', [LoyaltyAdminController::class, 'summary']);
+        Route::get('/loyalty/customers/{customer}', [LoyaltyAdminController::class, 'customer']);
+    });
+    Route::middleware('permission:customers.manage')->group(function () {
+        Route::post('/loyalty/customers/{customer}/adjust', [LoyaltyAdminController::class, 'adjust']);
     });
 
     Route::middleware('permission:settings.manage')->group(function () {
