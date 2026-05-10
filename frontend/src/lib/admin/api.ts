@@ -422,6 +422,7 @@ export type AdminEmployee = {
   name: string;
   email: string;
   phone: string | null;
+  avatar_url: string | null;
   is_active: boolean;
   role: string | null;
   role_label: string | null;
@@ -434,6 +435,7 @@ export type EmployeeActivity = {
   description: string;
   occurred_at: string;
   ip_address: string | null;
+  user?: { id: number; name: string; avatar_url: string | null } | null;
 };
 export type EmployeeStats = { total: number; active: number; inactive: number; roles: number; logins_today: number };
 
@@ -455,6 +457,18 @@ export const updateEmployee = (id: number, body: Record<string, unknown>) =>
   request<{ data: AdminEmployee }>(`/admin/employees/${id}`, { method: 'PUT', body: JSON.stringify(body) });
 export const deleteEmployee = (id: number) =>
   request<{ data: { ok: boolean } }>(`/admin/employees/${id}`, { method: 'DELETE' });
+export const uploadEmployeeAvatar = (id: number, file: File) => {
+  const fd = new FormData();
+  fd.append('avatar', file);
+  return request<{ data: AdminEmployee }>(`/admin/employees/${id}/avatar`, {
+    method: 'POST',
+    body: fd,
+  });
+};
+export const deleteEmployeeAvatar = (id: number) =>
+  request<{ data: AdminEmployee }>(`/admin/employees/${id}/avatar`, { method: 'DELETE' });
+export const listRecentEmployeeActivity = (limit = 50) =>
+  request<{ data: EmployeeActivity[] }>(`/admin/employees-activity?limit=${limit}`);
 
 // Roles & permissions
 export type AdminRole = {

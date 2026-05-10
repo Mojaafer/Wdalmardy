@@ -7,11 +7,14 @@ import {
   createEmployee,
   updateEmployee,
   deleteEmployee,
+  uploadEmployeeAvatar,
+  deleteEmployeeAvatar,
   type AdminEmployee,
   type EmployeeStats,
   type EmployeeActivity,
   AdminApiError,
 } from '@/lib/admin/api';
+import EmployeeAvatar from '@/components/admin/EmployeeAvatar';
 import { fmtNumber, fmtDate, ROLE_LABELS } from '@/lib/admin/format';
 import PageHeader from '@/components/admin/PageHeader';
 import StatCard from '@/components/admin/StatCard';
@@ -143,9 +146,7 @@ export default function AdminEmployeesPage() {
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-[#FBEFE2] text-[#0E5C3A] grid place-items-center font-bold">
-                            {emp.name.slice(0, 1)}
-                          </div>
+                          <EmployeeAvatar name={emp.name} url={emp.avatar_url} size={36} />
                           <div>
                             <div className="font-bold">{emp.name}</div>
                             <div className="text-[11px] text-slate-500" dir="ltr">{emp.email}</div>
@@ -207,7 +208,17 @@ export default function AdminEmployeesPage() {
 
         <aside className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 h-fit">
           {detail ? (
-            <EmployeeDetail data={detail} />
+            <EmployeeDetail
+              data={detail}
+              onAvatarChanged={() => {
+                if (selectedId) {
+                  getEmployee(selectedId).then((r) =>
+                    setDetail({ employee: r.data, permissions: r.permissions, activity: r.activity }),
+                  );
+                  refresh();
+                }
+              }}
+            />
           ) : (
             <div className="text-center text-slate-400 py-12 text-sm">
               اختر موظف لعرض التفاصيل وسجل النشاط
@@ -240,24 +251,77 @@ export default function AdminEmployeesPage() {
 
 function EmployeeDetail({
   data,
+  onAvatarChanged,
 }: {
   data: { employee: AdminEmployee; permissions: string[]; activity: EmployeeActivity[] };
+  onAvatarChanged?: () => void;
 }) {
   const { employee, permissions, activity } = data;
+  const [busy, setBusy] = useState(false);
+
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setBusy(true);
+    try {
+      await uploadEmployeeAvatar(employee.id, f);
+      onAvatarChanged?.();
+    } finally {
+      setBusy(false);
+      e.target.value = '';
+    }
+  }
+
+  async function onClearAvatar() {
+    if (!employee.avatar_url) return;
+    if (!confirm('حذف صورة الموظف؟')) return;
+    setBusy(true);
+    try {
+      await deleteEmployeeAvatar(employee.id);
+      onAvatarChanged?.();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-[#FBEFE2] text-[#0E5C3A] grid place-items-center font-extrabold text-lg">
-          {employee.name.slice(0, 1)}
+        <div className="relative">
+          <EmployeeAvatar name={employee.name} url={employee.avatar_url} size={56} />
+          <label
+            className="absolute -bottom-1 -left-1 w-6 h-6 rounded-full bg-[#0E5C3A] text-white grid place-items-center text-[10px] font-bold cursor-pointer shadow"
+            title="تعديل الصورة"
+          >
+            ✎
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={onPickFile}
+              disabled={busy}
+            />
+          </label>
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-bold truncate">{employee.name}</div>
           <div className="text-xs text-slate-500 truncate" dir="ltr">{employee.email}</div>
-          {employee.role && (
-            <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">
-              {ROLE_LABELS[employee.role] ?? employee.role}
-            </span>
-          )}
+          <div className="flex items-center gap-2 mt-1">
+            {employee.role && (
+              <span className="inline-block text-xs px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">
+                {ROLE_LABELS[employee.role] ?? employee.role}
+              </span>
+            )}
+            {employee.avatar_url && (
+              <button
+                onClick={onClearAvatar}
+                disabled={busy}
+                className="text-[10px] text-rose-600 hover:underline"
+              >
+                حذف الصورة
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

@@ -19,10 +19,26 @@ class User extends Authenticatable
         'name',
         'email',
         'phone',
+        'avatar_path',
         'password',
         'is_active',
         'last_login_at',
     ];
+
+    /**
+     * Public URL of the stored avatar, or null if none.
+     */
+    public function avatarUrl(): ?string
+    {
+        if (! $this->avatar_path) {
+            return null;
+        }
+        if (str_starts_with($this->avatar_path, 'http')) {
+            return $this->avatar_path;
+        }
+
+        return '/storage/'.ltrim($this->avatar_path, '/');
+    }
 
     protected $hidden = [
         'password',

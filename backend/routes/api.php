@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\Admin\SupplierAdminController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\DeliveryZoneController;
+use App\Http\Controllers\Api\LoyaltyController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
@@ -47,6 +48,7 @@ Route::post('/orders', [OrderController::class, 'store']);
 Route::get('/offers/active', [OfferController::class, 'active']);
 Route::post('/coupons/validate', [CouponController::class, 'validate']);
 Route::get('/delivery-zones', [DeliveryZoneController::class, 'index']);
+Route::get('/loyalty/balance', [LoyaltyController::class, 'balance']);
 Route::get('/pages', [PageController::class, 'index']);
 Route::get('/pages/{slug}', [PageController::class, 'show']);
 Route::post('/messages', [MessageController::class, 'store']);
@@ -138,11 +140,14 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::get('/employees', [EmployeeAdminController::class, 'index']);
         Route::get('/employees/{employee}', [EmployeeAdminController::class, 'show']);
         Route::get('/roles', [EmployeeAdminController::class, 'roles']);
+        Route::get('/employees-activity', [EmployeeAdminController::class, 'recentActivity']);
     });
     Route::middleware('permission:employees.manage')->group(function () {
         Route::post('/employees', [EmployeeAdminController::class, 'store']);
         Route::put('/employees/{employee}', [EmployeeAdminController::class, 'update']);
         Route::delete('/employees/{employee}', [EmployeeAdminController::class, 'destroy']);
+        Route::post('/employees/{employee}/avatar', [EmployeeAdminController::class, 'uploadAvatar']);
+        Route::delete('/employees/{employee}/avatar', [EmployeeAdminController::class, 'deleteAvatar']);
         Route::put('/roles/{role}/permissions', [EmployeeAdminController::class, 'syncRolePermissions']);
     });
 

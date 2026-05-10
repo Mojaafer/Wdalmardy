@@ -7,6 +7,7 @@ use App\Models\EmployeeActivity;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -199,6 +200,74 @@ class EmployeeAdminController extends Controller
         };
     }
 
+    public function uploadAvatar(Request $request, User $employee)
+    {
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,jpg,png,webp|max:2048',
+        ]);
+
+        if ($employee->avatar_path && ! str_starts_with($employee->avatar_path, 'http')) {
+            Storage::disk('public')->delete($employee->avatar_path);
+        }
+
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $employee->update(['avatar_path' => $path]);
+
+        EmployeeActivity::log(
+            (int) $request->user()->id,
+            'employee.avatar_updated',
+            'حدّث صورة الموظف "'.$employee->name.'"',
+            ['user_id' => $employee->id],
+        );
+
+        return response()->json(['data' => $this->serialize($employee->fresh('roles'))]);
+    }
+
+    public function deleteAvatar(Request $request, User $employee)
+    {
+        if ($employee->avatar_path && ! str_starts_with($employee->avatar_path, 'http')) {
+            Storage::disk('public')->delete($employee->avatar_path);
+        }
+        $employee->update(['avatar_path' => null]);
+
+        EmployeeActivity::log(
+            (int) $request->user()->id,
+            'employee.avatar_removed',
+            'حذف صورة الموظف "'.$employee->name.'"',
+            ['user_id' => $employee->id],
+        );
+
+        return response()->json(['data' => $this->serialize($employee->fresh('roles'))]);
+    }
+
+    /**
+     * Recent activity across all employees, for the /admin/permissions feed.
+     */
+    public function recentActivity(Request $request)
+    {
+        $limit = min(200, max(1, (int) $request->integer('limit', 50)));
+
+        $rows = EmployeeActivity::with('user:id,name,avatar_path')
+            ->orderByDesc('occurred_at')
+            ->limit($limit)
+            ->get();
+
+        return response()->json([
+            'data' => $rows->map(fn (EmployeeActivity $a) => [
+                'id' => $a->id,
+                'action' => $a->action,
+                'description' => $a->description,
+                'occurred_at' => $a->occurred_at?->toIso8601String(),
+                'ip_address' => $a->ip_address,
+                'user' => $a->user ? [
+                    'id' => $a->user->id,
+                    'name' => $a->user->name,
+                    'avatar_url' => $a->user->avatarUrl(),
+                ] : null,
+            ]),
+        ]);
+    }
+
     private function serialize(User $u): array
     {
         $role = $u->roles->first();
@@ -208,6 +277,7 @@ class EmployeeAdminController extends Controller
             'name' => $u->name,
             'email' => $u->email,
             'phone' => $u->phone,
+            'avatar_url' => $u->avatarUrl(),
             'is_active' => (bool) $u->is_active,
             'role' => $role?->name,
             'role_label' => $role ? $this->roleLabel($role->name) : null,

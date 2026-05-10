@@ -114,9 +114,32 @@ export type CreateOrderInput = {
   payment_method: 'whatsapp' | 'cod' | 'bank_transfer';
   notes?: string;
   coupon_code?: string;
+  redeem_points?: number;
   delivery_zone_id?: number;
   items: { product_id: number; quantity: number }[];
 };
+
+export type LoyaltyTier = {
+  key: 'bronze' | 'silver' | 'gold' | 'platinum';
+  label: string;
+  min: number;
+  color: string;
+};
+
+export type LoyaltyBalance = {
+  name: string | null;
+  phone: string;
+  loyalty_points: number;
+  lifetime_points: number;
+  tier: LoyaltyTier;
+  rules: { earn_rate: number; redeem_value: number; redeem_cap_pct: number };
+  next_tier: { key: string; label: string; min: number; remaining: number } | null;
+};
+
+export async function getLoyaltyBalance(phone: string): Promise<{ data: LoyaltyBalance | null }> {
+  const qs = new URLSearchParams({ phone }).toString();
+  return request(`/loyalty/balance?${qs}`);
+}
 
 export type DeliveryZone = {
   id: number;

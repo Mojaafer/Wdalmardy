@@ -4,11 +4,15 @@ import { useEffect, useState } from 'react';
 import {
   listRoles,
   updateRolePermissions,
+  listRecentEmployeeActivity,
   type AdminRole,
+  type EmployeeActivity,
   AdminApiError,
 } from '@/lib/admin/api';
+import EmployeeAvatar from '@/components/admin/EmployeeAvatar';
 import PageHeader from '@/components/admin/PageHeader';
-import { ShieldCheck, Save } from 'lucide-react';
+import { fmtDate } from '@/lib/admin/format';
+import { ShieldCheck, Save, Activity } from 'lucide-react';
 
 const PERM_GROUP_LABELS: Record<string, string> = {
   dashboard: 'لوحة التحكم',
@@ -37,9 +41,10 @@ export default function AdminPermissionsPage() {
   const [selected, setSelected] = useState<Record<string, Set<string>>>({});
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [activity, setActivity] = useState<EmployeeActivity[]>([]);
 
   async function refresh() {
-    const r = await listRoles();
+    const [r, a] = await Promise.all([listRoles(), listRecentEmployeeActivity(40)]);
     setRoles(r.data);
     setGroups(r.permissions);
     const sel: Record<string, Set<string>> = {};
@@ -47,6 +52,7 @@ export default function AdminPermissionsPage() {
       sel[role.name] = new Set(role.permissions);
     }
     setSelected(sel);
+    setActivity(a.data);
   }
 
   useEffect(() => {
@@ -160,6 +166,41 @@ export default function AdminPermissionsPage() {
             )}
           </div>
         )}
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100">
+        <div className="p-4 border-b border-slate-100 flex items-center gap-2 text-slate-800 font-bold text-sm">
+          <Activity className="w-4 h-4 text-[#0E5C3A]" /> آخر نشاط الموظفين
+        </div>
+        <div className="divide-y divide-slate-100">
+          {activity.length === 0 ? (
+            <div className="text-center text-slate-400 text-sm py-8">لا يوجد نشاط بعد</div>
+          ) : (
+            activity.map((a) => (
+              <div key={a.id} className="px-4 py-3 flex items-center gap-3">
+                <EmployeeAvatar
+                  name={a.user?.name ?? 'غير معروف'}
+                  url={a.user?.avatar_url ?? null}
+                  size={32}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-slate-800 truncate">
+                    <span className="font-bold">{a.user?.name ?? '—'}</span>
+                    <span className="text-slate-500"> · </span>
+                    <span>{a.description}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                    <span>{fmtDate(a.occurred_at)}</span>
+                    {a.ip_address && <span dir="ltr" className="text-slate-400">{a.ip_address}</span>}
+                  </div>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-700" dir="ltr">
+                  {a.action}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

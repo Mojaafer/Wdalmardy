@@ -8,12 +8,14 @@ import {
   createOrder,
   validateCoupon,
   getDeliveryZones,
+  getLoyaltyBalance,
   type CouponValidation,
   type DeliveryZone,
+  type LoyaltyBalance,
 } from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import { ProductImage } from '@/components/ProductImage';
-import { Truck, Store, MessageCircle, Banknote, Lock, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { Truck, Store, MessageCircle, Banknote, Lock, ShieldCheck, ArrowLeft, Award } from 'lucide-react';
 
 const SUDAN_STATES = [
   { ar: 'الخرطوم', en: 'Khartoum' },
@@ -56,6 +58,10 @@ export default function CheckoutPage() {
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [zoneId, setZoneId] = useState<number | ''>('');
 
+  const [loyalty, setLoyalty] = useState<LoyaltyBalance | null>(null);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+  const [redeemPoints, setRedeemPoints] = useState(0);
+
   useEffect(() => {
     setMounted(true);
     getDeliveryZones()
@@ -67,11 +73,42 @@ export default function CheckoutPage() {
   const baseDeliveryFee =
     delivery === 'delivery' ? (selectedZone ? selectedZone.fee : 1500) : 0;
   const deliveryFee = coupon?.free_shipping ? 0 : baseDeliveryFee;
-  const discount = coupon ? coupon.discount : 0;
-  const subtotalAfterDiscount = coupon?.free_shipping
+  const couponDiscount = coupon ? coupon.discount : 0;
+  const subtotalAfterCoupon = coupon?.free_shipping
     ? subtotal
-    : Math.max(0, subtotal - discount);
-  const total = subtotalAfterDiscount + deliveryFee;
+    : Math.max(0, subtotal - couponDiscount);
+
+  // Server-side cap: 1 point = redeem_value, points capped at redeem_cap_pct of subtotal
+  const redeemValue = loyalty?.rules.redeem_value ?? 10;
+  const redeemCapPct = loyalty?.rules.redeem_cap_pct ?? 0.5;
+  const maxRedeemFromSubtotal = Math.floor((subtotalAfterCoupon * redeemCapPct) / redeemValue);
+  const maxRedeemFromBalance = loyalty?.loyalty_points ?? 0;
+  const maxRedeem = Math.max(0, Math.min(maxRedeemFromBalance, maxRedeemFromSubtotal));
+  const safeRedeem = Math.min(redeemPoints, maxRedeem);
+  const pointsDiscount = safeRedeem * redeemValue;
+  const subtotalAfterAll = Math.max(0, subtotalAfterCoupon - pointsDiscount);
+  const total = subtotalAfterAll + deliveryFee;
+
+  // Re-clamp if cap drops (e.g. coupon applied)
+  useEffect(() => {
+    if (redeemPoints > maxRedeem) setRedeemPoints(maxRedeem);
+  }, [maxRedeem, redeemPoints]);
+
+  async function lookupLoyalty(p: string) {
+    if (!p.trim()) {
+      setLoyalty(null);
+      return;
+    }
+    setLoyaltyLoading(true);
+    try {
+      const r = await getLoyaltyBalance(p.trim());
+      setLoyalty(r.data);
+    } catch {
+      setLoyalty(null);
+    } finally {
+      setLoyaltyLoading(false);
+    }
+  }
 
   async function applyCoupon() {
     setCouponError(null);
@@ -148,6 +185,7 @@ export default function CheckoutPage() {
         payment_method: payment,
         notes: notes || undefined,
         coupon_code: coupon?.code,
+        redeem_points: safeRedeem > 0 ? safeRedeem : undefined,
         delivery_zone_id: delivery === 'delivery' && zoneId ? Number(zoneId) : undefined,
         items: items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
       });
@@ -189,6 +227,7 @@ export default function CheckoutPage() {
                   className="input"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  onBlur={(e) => lookupLoyalty(e.target.value)}
                   placeholder={t('checkout.phone_placeholder')}
                 />
               </Field>
@@ -377,6 +416,71 @@ export default function CheckoutPage() {
             )}
             {couponError && <div className="text-rose-600 text-xs mt-1">{couponError}</div>}
           </div>
+
+          {loyalty && loyalty.loyalty_points > 0 && (
+            <div className="border-t border-gray-100 pt-3 space-y-2">
+              <div className="flex items-center justify-between text-sm font-bold text-gray-800">
+                <span className="flex items-center gap-1.5">
+                  <Award className="h-4 w-4 text-brand-green" />
+                  {locale === 'ar'
+                    ? `لديك ${loyalty.loyalty_points.toLocaleString('ar-EG')} نقطة (${loyalty.tier.label})`
+                    : `You have ${loyalty.loyalty_points} pts (${loyalty.tier.label})`}
+                </span>
+              </div>
+              {maxRedeem === 0 ? (
+                <div className="text-[11px] text-gray-500">
+                  {locale === 'ar'
+                    ? `الحد الأقصى للاستبدال ${(redeemCapPct * 100).toFixed(0)}٪ من المجموع — أضف منتجات أكثر للاستبدال.`
+                    : `Max ${(redeemCapPct * 100).toFixed(0)}% of subtotal — add more items to redeem.`}
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={0}
+                      max={maxRedeem}
+                      step={1}
+                      value={safeRedeem}
+                      onChange={(e) => setRedeemPoints(Number(e.target.value))}
+                      className="flex-1 accent-brand-green"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      max={maxRedeem}
+                      value={safeRedeem}
+                      onChange={(e) =>
+                        setRedeemPoints(
+                          Math.max(0, Math.min(maxRedeem, Number(e.target.value) || 0)),
+                        )
+                      }
+                      className="w-20 text-center border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className="text-[11px] text-gray-500 flex justify-between">
+                    <span>
+                      {locale === 'ar'
+                        ? `حتى ${maxRedeem.toLocaleString('ar-EG')} نقطة (سقف ${(redeemCapPct * 100).toFixed(0)}٪)`
+                        : `Up to ${maxRedeem} pts (${(redeemCapPct * 100).toFixed(0)}% cap)`}
+                    </span>
+                    {safeRedeem > 0 && (
+                      <span className="text-emerald-600 font-bold">
+                        -{formatPrice(pointsDiscount, locale)} {t('common.currency')}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {loyaltyLoading && (
+            <div className="border-t border-gray-100 pt-3 text-[11px] text-gray-400">
+              {locale === 'ar' ? 'جارٍ التحقق من رصيد النقاط...' : 'Checking points...'}
+            </div>
+          )}
+
           <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">{t('cart.subtotal')}</span>
@@ -384,13 +488,26 @@ export default function CheckoutPage() {
                 {formatPrice(subtotal, locale)} {t('common.currency')}
               </span>
             </div>
-            {discount > 0 && !coupon?.free_shipping && (
+            {couponDiscount > 0 && !coupon?.free_shipping && (
               <div className="flex justify-between">
                 <span className="text-gray-500">
                   {locale === 'ar' ? 'الخصم' : 'Discount'}
                 </span>
                 <span className="text-emerald-600">
-                  -{formatPrice(discount, locale)} {t('common.currency')}
+                  -{formatPrice(couponDiscount, locale)} {t('common.currency')}
+                </span>
+              </div>
+            )}
+            {pointsDiscount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-500 flex items-center gap-1">
+                  <Award className="h-3.5 w-3.5 text-brand-green" />
+                  {locale === 'ar'
+                    ? `استبدال ${safeRedeem.toLocaleString('ar-EG')} نقطة`
+                    : `Redeem ${safeRedeem} pts`}
+                </span>
+                <span className="text-emerald-600">
+                  -{formatPrice(pointsDiscount, locale)} {t('common.currency')}
                 </span>
               </div>
             )}
