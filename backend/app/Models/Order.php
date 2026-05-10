@@ -118,7 +118,17 @@ class Order extends Model
         if ((int) $this->points_earned > 0 || ! $this->customer_id) {
             return 0;
         }
-        $payable = max(0, (float) $this->subtotal - (float) $this->discount_amount - (float) $this->points_discount);
+        // For free_shipping coupons, discount_amount holds the delivery fee
+        // (which is already zeroed in delivery_fee), so don't subtract it again
+        // from the product subtotal — that would under-award points.
+        $couponDiscount = (float) $this->discount_amount;
+        if ($this->coupon_id && $couponDiscount > 0) {
+            $coupon = $this->coupon()->first();
+            if ($coupon && $coupon->type === 'free_shipping') {
+                $couponDiscount = 0.0;
+            }
+        }
+        $payable = max(0, (float) $this->subtotal - $couponDiscount - (float) $this->points_discount);
         $earned = (int) floor($payable / self::LOYALTY_EARN_RATE);
         if ($earned <= 0) {
             return 0;
