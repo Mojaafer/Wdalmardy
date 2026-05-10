@@ -41,9 +41,16 @@ class Order extends Model
         });
 
         static::updated(function (Order $order) {
+            if (! $order->wasChanged('status')) {
+                return;
+            }
             // award points the first time an order transitions to 'delivered'
-            if ($order->wasChanged('status') && $order->status === 'delivered' && (int) $order->points_earned === 0) {
+            if ($order->status === 'delivered' && (int) $order->points_earned === 0) {
                 $order->awardLoyaltyPoints();
+            }
+            // on cancel: refund any redeemed points and claw back any earned points
+            if ($order->status === 'cancelled') {
+                $order->reverseLoyaltyPoints();
             }
         });
     }
@@ -141,6 +148,36 @@ class Order extends Model
         $this->forceFill(['points_earned' => $earned])->saveQuietly();
 
         return $earned;
+    }
+
+    /**
+     * Reverse loyalty side-effects when an order is cancelled. Idempotent —
+     * each side is only reversed once (the points_redeemed / points_earned
+     * fields are zeroed after refund so re-running has no effect).
+     *  - Redeemed points: credited back to the customer balance (without
+     *    bumping lifetime, since the redemption never increased lifetime).
+     *  - Earned points: clawed back from the balance only (lifetime stays so
+     *    tier doesn't shift on a cancellation).
+     */
+    public function reverseLoyaltyPoints(): void
+    {
+        if (! $this->customer_id) {
+            return;
+        }
+        $customer = $this->customer()->first();
+        if (! $customer) {
+            return;
+        }
+        $redeemed = (int) $this->points_redeemed;
+        $earned = (int) $this->points_earned;
+        if ($redeemed > 0) {
+            $customer->awardPoints($redeemed, 'refund', $this->id, 'إلغاء طلب '.$this->order_number);
+            $this->forceFill(['points_redeemed' => 0])->saveQuietly();
+        }
+        if ($earned > 0) {
+            $customer->awardPoints(-$earned, 'adjust', $this->id, 'إلغاء طلب '.$this->order_number);
+            $this->forceFill(['points_earned' => 0])->saveQuietly();
+        }
     }
 
     public static function generateOrderNumber(): string

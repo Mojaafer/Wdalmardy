@@ -183,7 +183,10 @@ export default function BarcodesPage() {
                 <th className="px-4 py-3 text-right">
                   <input
                     type="checkbox"
-                    checked={items.length > 0 && selected.size === items.filter((i) => i.barcode).length}
+                    checked={(() => {
+                      const n = items.filter((i) => i.barcode).length;
+                      return n > 0 && selected.size === n;
+                    })()}
                     onChange={toggleAll}
                   />
                 </th>

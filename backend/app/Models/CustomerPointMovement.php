@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CustomerPointMovement extends Model
 {
-    public const TYPES = ['earn', 'redeem', 'adjust'];
+    public const TYPES = ['earn', 'redeem', 'adjust', 'refund'];
 
     protected $fillable = [
         'customer_id',
