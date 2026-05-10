@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminNotification;
+use App\Models\AdminNotificationRead;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class NotificationAdminController extends Controller
 {
@@ -18,16 +20,26 @@ class NotificationAdminController extends Controller
         }
 
         if ($request->boolean('unread')) {
-            $query->unread();
+            $query->unreadFor($userId);
         }
 
-        $items = $query->latest()->limit($request->integer('limit', 50))->get();
+        $items = $query->latest()
+            ->with(['reads' => fn ($q) => $q->where('user_id', $userId)])
+            ->limit($request->integer('limit', 50))
+            ->get();
+
+        // Surface a per-user `read_at` so the frontend doesn't need to know about the pivot
+        $items->each(function (AdminNotification $n) {
+            $read = $n->reads->first();
+            $n->setAttribute('read_at', $read?->read_at);
+            $n->unsetRelation('reads');
+        });
 
         return response()->json([
             'data' => $items,
             'meta' => [
                 'total' => AdminNotification::forUser($userId)->count(),
-                'unread' => AdminNotification::forUser($userId)->unread()->count(),
+                'unread' => AdminNotification::forUser($userId)->unreadFor($userId)->count(),
             ],
         ]);
     }
@@ -37,30 +49,74 @@ class NotificationAdminController extends Controller
         $userId = $request->user()?->id;
 
         return response()->json([
-            'unread' => AdminNotification::forUser($userId)->unread()->count(),
+            'unread' => AdminNotification::forUser($userId)->unreadFor($userId)->count(),
         ]);
     }
 
     public function markRead(Request $request, AdminNotification $notification)
     {
-        $notification->update(['read_at' => now()]);
+        $userId = $request->user()?->id;
+        if ($userId === null || ! $notification->isVisibleTo($userId)) {
+            abort(403);
+        }
 
-        return response()->json(['data' => $notification->fresh()]);
+        $read = AdminNotificationRead::firstOrCreate(
+            ['notification_id' => $notification->id, 'user_id' => $userId],
+            ['read_at' => now()],
+        );
+
+        $notification->setAttribute('read_at', $read->read_at);
+
+        return response()->json(['data' => $notification]);
     }
 
     public function markAllRead(Request $request)
     {
         $userId = $request->user()?->id;
+        if ($userId === null) {
+            abort(403);
+        }
 
-        $count = AdminNotification::forUser($userId)
-            ->unread()
-            ->update(['read_at' => now()]);
+        $unreadIds = AdminNotification::forUser($userId)
+            ->unreadFor($userId)
+            ->pluck('id');
 
-        return response()->json(['data' => ['marked_read' => $count]]);
+        if ($unreadIds->isEmpty()) {
+            return response()->json(['data' => ['marked_read' => 0]]);
+        }
+
+        $now = now();
+        $rows = $unreadIds->map(fn ($id) => [
+            'notification_id' => $id,
+            'user_id' => $userId,
+            'read_at' => $now,
+        ])->all();
+
+        // insertOrIgnore tolerates concurrent reads from the same user
+        DB::table('admin_notification_reads')->insertOrIgnore($rows);
+
+        return response()->json(['data' => ['marked_read' => count($rows)]]);
     }
 
-    public function destroy(AdminNotification $notification)
+    public function destroy(Request $request, AdminNotification $notification)
     {
+        $userId = $request->user()?->id;
+        if ($userId === null || ! $notification->isVisibleTo($userId)) {
+            abort(403);
+        }
+
+        if ($notification->user_id === null) {
+            // Global notification — deleting would remove it for every admin.
+            // Treat "delete" as "dismiss for me" by inserting a read row instead.
+            AdminNotificationRead::firstOrCreate(
+                ['notification_id' => $notification->id, 'user_id' => $userId],
+                ['read_at' => now()],
+            );
+
+            return response()->json(['data' => ['dismissed' => true]]);
+        }
+
+        // User-specific notification — only the owner gets here, so safe to delete.
         $notification->delete();
 
         return response()->json(['data' => ['deleted' => true]]);
