@@ -78,10 +78,11 @@ export default function CheckoutPage() {
     ? subtotal
     : Math.max(0, subtotal - couponDiscount);
 
-  // Server-side cap: 1 point = redeem_value, points capped at redeem_cap_pct of subtotal
+  // Mirror the server: cap is computed from the RAW subtotal (before coupon),
+  // see OrderController::store. Using subtotalAfterCoupon would under-cap the slider.
   const redeemValue = loyalty?.rules.redeem_value ?? 10;
   const redeemCapPct = loyalty?.rules.redeem_cap_pct ?? 0.5;
-  const maxRedeemFromSubtotal = Math.floor((subtotalAfterCoupon * redeemCapPct) / redeemValue);
+  const maxRedeemFromSubtotal = Math.floor((subtotal * redeemCapPct) / redeemValue);
   const maxRedeemFromBalance = loyalty?.loyalty_points ?? 0;
   const maxRedeem = Math.max(0, Math.min(maxRedeemFromBalance, maxRedeemFromSubtotal));
   const safeRedeem = Math.min(redeemPoints, maxRedeem);
