@@ -17,6 +17,8 @@ use App\Http\Controllers\Api\Admin\NotificationAdminController;
 use App\Http\Controllers\Api\Admin\OfferAdminController;
 use App\Http\Controllers\Api\Admin\OrderAdminController;
 use App\Http\Controllers\Api\Admin\PageAdminController;
+use App\Http\Controllers\Api\Admin\PosSaleAdminController;
+use App\Http\Controllers\Api\Admin\PosSessionAdminController;
 use App\Http\Controllers\Api\Admin\ProductAdminController;
 use App\Http\Controllers\Api\Admin\ReportsAdminController;
 use App\Http\Controllers\Api\Admin\SettingAdminController;
@@ -234,6 +236,23 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::get('/settings', [SettingAdminController::class, 'index']);
         Route::put('/settings', [SettingAdminController::class, 'update']);
         Route::get('/settings/backup', [SettingAdminController::class, 'backup']);
+    });
+
+    // POS — cashier app
+    Route::middleware('permission:pos.operate')->group(function () {
+        Route::get('/pos/products/search', [PosSaleAdminController::class, 'lookupProduct']);
+        Route::get('/pos/sessions/current', [PosSessionAdminController::class, 'current']);
+        Route::post('/pos/sessions', [PosSessionAdminController::class, 'open']);
+        Route::post('/pos/sessions/{session}/close', [PosSessionAdminController::class, 'close']);
+        Route::get('/pos/sales', [PosSaleAdminController::class, 'index']);
+        Route::get('/pos/sales/{sale}', [PosSaleAdminController::class, 'show']);
+        Route::post('/pos/sales', [PosSaleAdminController::class, 'store']);
+    });
+    Route::middleware('permission:pos.manage')->group(function () {
+        Route::get('/pos/sessions', [PosSessionAdminController::class, 'index']);
+        Route::get('/pos/sessions/{session}', [PosSessionAdminController::class, 'show']);
+        Route::get('/pos/z-report', [PosSessionAdminController::class, 'zReport']);
+        Route::post('/pos/sales/{sale}/void', [PosSaleAdminController::class, 'void']);
     });
 
     // Notifications: any authenticated admin can read their own

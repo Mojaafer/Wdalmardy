@@ -32,6 +32,7 @@ class AdminSeeder extends Seeder
             'reports.view',
             'settings.manage',
             'users.manage',
+            'pos.operate', 'pos.manage',
         ];
 
         foreach ($permissions as $perm) {
@@ -50,6 +51,7 @@ class AdminSeeder extends Seeder
             'inventory.view',
             'invoices.view', 'invoices.manage',
             'reports.view',
+            'pos.operate', 'pos.manage',
         ]);
 
         $driver = Role::firstOrCreate(['name' => 'driver', 'guard_name' => 'web']);
@@ -71,6 +73,7 @@ class AdminSeeder extends Seeder
             'inventory.view', 'inventory.manage',
             'messages.view', 'messages.manage',
             'invoices.view',
+            'pos.operate',
         ]);
 
         $user = User::updateOrCreate(

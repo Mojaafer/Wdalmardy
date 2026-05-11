@@ -900,3 +900,156 @@ export const adjustCustomerPoints = (
     method: 'POST',
     body: JSON.stringify(body),
   });
+
+// ---------- POS ----------
+export type PosSession = {
+  id: number;
+  register: string;
+  status: 'open' | 'closed';
+  opening_cash: number;
+  closing_cash_expected: number | null;
+  closing_cash_counted: number | null;
+  variance: number | null;
+  opened_by: { id: number; name: string } | null;
+  closed_by: { id: number; name: string } | null;
+  opened_at: string | null;
+  closed_at: string | null;
+  notes: string | null;
+  sales_count?: number;
+  sales_total?: number;
+  expected_cash?: number;
+};
+export type PosProduct = {
+  id: number;
+  slug: string;
+  name: { ar: string | null; en: string | null };
+  barcode: string | null;
+  price: number;
+  stock: number;
+};
+export type PosSaleItem = {
+  id: number;
+  product_id: number;
+  product_name: string;
+  barcode: string | null;
+  unit_price: number;
+  quantity: number;
+  line_total: number;
+};
+export type PosSale = {
+  id: number;
+  sale_number: string;
+  session_id: number;
+  session: { id: number; register: string } | null;
+  cashier: { id: number; name: string } | null;
+  customer: {
+    id: number;
+    name: string;
+    phone: string | null;
+    loyalty_points: number | null;
+  } | null;
+  subtotal: number;
+  discount_amount: number;
+  total: number;
+  payment_method: 'cash' | 'mobile_money' | 'card';
+  amount_paid: number;
+  change_given: number;
+  points_earned: number;
+  status: 'completed' | 'voided';
+  notes: string | null;
+  created_at: string | null;
+  voided_at: string | null;
+  items?: PosSaleItem[];
+};
+export type PosZReport = {
+  date: string;
+  total_sales: number;
+  total_revenue: number;
+  total_items: number;
+  voids: number;
+  by_payment_method: { method: string; count: number; total: number }[];
+  by_cashier: {
+    cashier_id: number;
+    cashier_name: string;
+    count: number;
+    total: number;
+  }[];
+};
+
+export const getCurrentPosSession = () =>
+  request<{ data: PosSession | null }>('/admin/pos/sessions/current');
+export const openPosSession = (body: {
+  opening_cash: number;
+  register?: string;
+  notes?: string;
+}) =>
+  request<{ data: PosSession }>('/admin/pos/sessions', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+export const closePosSession = (
+  sessionId: number,
+  body: { closing_cash_counted: number; notes?: string },
+) =>
+  request<{ data: PosSession }>(`/admin/pos/sessions/${sessionId}/close`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+export const searchPosProducts = (q: string) =>
+  request<{ data: PosProduct[] }>(
+    `/admin/pos/products/search?q=${encodeURIComponent(q)}`,
+  );
+export const createPosSale = (body: {
+  session_id: number;
+  items: { product_id: number; quantity: number }[];
+  payment_method: 'cash' | 'mobile_money' | 'card';
+  amount_paid: number;
+  discount_amount?: number;
+  customer_phone?: string;
+  notes?: string;
+}) =>
+  request<{ data: PosSale }>('/admin/pos/sales', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+export const listPosSales = (params: {
+  status?: string;
+  payment_method?: string;
+  session_id?: number;
+  q?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+} = {}) => {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== '' && v !== null) qs.set(k, String(v));
+  });
+  return request<{
+    data: PosSale[];
+    meta: { total: number; per_page: number; current_page: number; last_page: number };
+  }>(`/admin/pos/sales${qs.toString() ? `?${qs.toString()}` : ''}`);
+};
+export const getPosSale = (id: number) =>
+  request<{ data: PosSale }>(`/admin/pos/sales/${id}`);
+export const voidPosSale = (id: number) =>
+  request<{ data: PosSale }>(`/admin/pos/sales/${id}/void`, { method: 'POST' });
+export const listPosSessions = (params: {
+  status?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+} = {}) => {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== '' && v !== null) qs.set(k, String(v));
+  });
+  return request<{
+    data: PosSession[];
+    meta: { total: number; per_page: number; current_page: number; last_page: number };
+  }>(`/admin/pos/sessions${qs.toString() ? `?${qs.toString()}` : ''}`);
+};
+export const getPosZReport = (date?: string) =>
+  request<{ data: PosZReport }>(
+    `/admin/pos/z-report${date ? `?date=${date}` : ''}`,
+  );
