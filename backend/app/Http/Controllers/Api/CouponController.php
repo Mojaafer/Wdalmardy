@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 
 class CouponController extends Controller
@@ -14,6 +15,10 @@ class CouponController extends Controller
             'code' => 'required|string|max:60',
             'subtotal' => 'required|numeric|min:0',
             'shipping' => 'sometimes|numeric|min:0',
+            'customer_phone' => 'nullable|string|max:60',
+            'region' => 'nullable|string|max:80',
+            'product_ids' => 'nullable|array',
+            'product_ids.*' => 'integer',
         ]);
 
         $coupon = Coupon::where('code', strtoupper($data['code']))->first();
@@ -37,10 +42,19 @@ class CouponController extends Controller
 
         $subtotal = (float) $data['subtotal'];
         $shipping = (float) ($data['shipping'] ?? 0);
+        $customer = ! empty($data['customer_phone'])
+            ? Customer::where('phone', $data['customer_phone'])->first()
+            : null;
 
         if ($subtotal < (float) $coupon->min_order_amount) {
             return response()->json([
                 'message' => 'الحد الأدنى للطلب '.number_format((float) $coupon->min_order_amount).' ج.س لاستخدام هذا الكوبون.',
+            ], 422);
+        }
+
+        if (! $coupon->matchesTarget($customer, $data['region'] ?? null, $data['product_ids'] ?? [])) {
+            return response()->json([
+                'message' => 'هذا الكوبون لا ينطبق على بيانات هذا الطلب.',
             ], 422);
         }
 

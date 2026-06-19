@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 
 class Coupon extends Model
 {
+    use Auditable;
+
     protected $fillable = [
         'code',
         'type',
@@ -16,6 +19,11 @@ class Coupon extends Model
         'used_count',
         'max_uses_per_customer',
         'applies_to',
+        'customer_segment',
+        'geo_regions',
+        'product_ids',
+        'seasonal_tag',
+        'vip_only',
         'starts_at',
         'ends_at',
         'is_active',
@@ -27,6 +35,9 @@ class Coupon extends Model
         'max_discount' => 'decimal:2',
         'min_order_amount' => 'decimal:2',
         'is_active' => 'boolean',
+        'vip_only' => 'boolean',
+        'geo_regions' => 'array',
+        'product_ids' => 'array',
         'used_count' => 'integer',
         'max_uses' => 'integer',
         'max_uses_per_customer' => 'integer',
@@ -56,6 +67,23 @@ class Coupon extends Model
     public function isUsable(float $subtotal): bool
     {
         return $this->status() === 'active' && $subtotal >= (float) $this->min_order_amount;
+    }
+
+    public function matchesTarget(?Customer $customer = null, ?string $region = null, array $productIds = []): bool
+    {
+        if ($this->vip_only && (! $customer || (int) $customer->lifetime_points < 10000)) {
+            return false;
+        }
+
+        return match ($this->customer_segment ?? 'all') {
+            'first_order' => $customer ? (int) $customer->total_orders === 0 : true,
+            'returning' => $customer ? (int) $customer->total_orders > 0 : false,
+            'region' => empty($this->geo_regions) || ($region && in_array($region, $this->geo_regions, true)),
+            'seasonal' => ! empty($this->seasonal_tag),
+            'product' => empty($this->product_ids) || count(array_intersect($this->product_ids, $productIds)) > 0,
+            'vip' => $customer && (int) $customer->lifetime_points >= 10000,
+            default => true,
+        };
     }
 
     public function calculateDiscount(float $subtotal, float $shipping = 0): float

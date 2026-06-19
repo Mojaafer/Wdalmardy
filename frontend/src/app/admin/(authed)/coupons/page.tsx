@@ -14,7 +14,7 @@ import { fmtNumber, fmtSDG } from '@/lib/admin/format';
 import PageHeader from '@/components/admin/PageHeader';
 import StatCard from '@/components/admin/StatCard';
 import Drawer from '@/components/admin/Drawer';
-import { Ticket, CheckCircle2, XCircle, AlertTriangle, Pencil, Trash2, Search, Copy } from 'lucide-react';
+import { Ticket, CheckCircle2, AlertTriangle, Pencil, Trash2, Search, Copy, Target } from 'lucide-react';
 
 const STATUS_LABELS: Record<string, string> = {
   active: 'نشط',
@@ -33,7 +33,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function AdminCouponsPage() {
   const [coupons, setCoupons] = useState<AdminCoupon[]>([]);
-  const [stats, setStats] = useState<CouponStats>({ total: 0, active: 0, expired: 0, exhausted: 0 });
+  const [stats, setStats] = useState<CouponStats>({ total: 0, active: 0, expired: 0, exhausted: 0, targeted: 0 });
   const [filters, setFilters] = useState({ q: '' });
   const [drawer, setDrawer] = useState<{ open: boolean; editing: AdminCoupon | null }>({
     open: false,
@@ -63,8 +63,8 @@ export default function AdminCouponsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="إجمالي الكوبونات" value={fmtNumber(stats.total)} icon={Ticket} accent="text-[#0E5C3A]" />
         <StatCard label="كوبونات نشطة" value={fmtNumber(stats.active)} icon={CheckCircle2} accent="text-emerald-600" />
-        <StatCard label="كوبونات منتهية" value={fmtNumber(stats.expired)} icon={XCircle} accent="text-rose-600" />
-        <StatCard label="كوبونات مستنفدة" value={fmtNumber(stats.exhausted)} icon={AlertTriangle} accent="text-orange-600" />
+        <StatCard label="كوبونات مستهدفة" value={fmtNumber(stats.targeted ?? 0)} icon={Target} accent="text-sky-600" />
+        <StatCard label="منتهية/مستنفدة" value={fmtNumber(stats.expired + stats.exhausted)} icon={AlertTriangle} accent="text-orange-600" />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-100">
@@ -89,6 +89,7 @@ export default function AdminCouponsPage() {
                 <th className="text-right px-4 py-3 font-medium">الخصم</th>
                 <th className="text-right px-4 py-3 font-medium">الحد الأدنى</th>
                 <th className="text-right px-4 py-3 font-medium">الاستخدام</th>
+                <th className="text-right px-4 py-3 font-medium">الاستهداف</th>
                 <th className="text-right px-4 py-3 font-medium">صلاحية</th>
                 <th className="text-right px-4 py-3 font-medium">الحالة</th>
                 <th className="text-right px-4 py-3 font-medium">إجراءات</th>
@@ -97,7 +98,7 @@ export default function AdminCouponsPage() {
             <tbody className="divide-y divide-slate-100">
               {coupons.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-slate-400">لا توجد كوبونات</td>
+                  <td colSpan={8} className="text-center py-10 text-slate-400">لا توجد كوبونات</td>
                 </tr>
               ) : (
                 coupons.map((c) => (
@@ -126,6 +127,9 @@ export default function AdminCouponsPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       {c.used_count}/{c.max_uses ?? '∞'}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      <TargetSummary coupon={c} />
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       {c.ends_at ? new Date(c.ends_at).toLocaleDateString('ar-SD') : '—'}
@@ -178,8 +182,35 @@ export default function AdminCouponsPage() {
           }}
         />
       </Drawer>
+
+      {(stats.top_coupons?.length ?? 0) > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+          <div className="font-bold text-slate-800 mb-3">أفضل الكوبونات استخداماً</div>
+          <div className="grid md:grid-cols-5 gap-2">
+            {stats.top_coupons!.map((coupon) => (
+              <div key={coupon.code} className="border border-slate-100 rounded-lg p-3">
+                <div className="font-mono font-bold text-[#0E5C3A]" dir="ltr">{coupon.code}</div>
+                <div className="text-xs text-slate-500 mt-1">{fmtNumber(coupon.used_count)} استخدام</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function TargetSummary({ coupon }: { coupon: AdminCoupon }) {
+  const parts = [
+    coupon.customer_segment && coupon.customer_segment !== 'all' ? coupon.customer_segment : null,
+    coupon.vip_only ? 'VIP' : null,
+    coupon.geo_regions.length ? `${coupon.geo_regions.length} مناطق` : null,
+    coupon.product_ids.length ? `${coupon.product_ids.length} منتجات` : null,
+    coupon.seasonal_tag,
+  ].filter(Boolean);
+
+  if (parts.length === 0) return <span className="text-slate-400">كل العملاء</span>;
+  return <span className="text-xs px-2 py-1 rounded-md bg-sky-50 text-sky-700">{parts.join(' · ')}</span>;
 }
 
 function CouponForm({
@@ -198,6 +229,11 @@ function CouponForm({
     max_uses: editing?.max_uses ?? '',
     max_uses_per_customer: editing?.max_uses_per_customer ?? '',
     applies_to: editing?.applies_to ?? 'all',
+    customer_segment: editing?.customer_segment ?? 'all',
+    geo_regions: editing?.geo_regions?.join(', ') ?? '',
+    product_ids: editing?.product_ids?.join(', ') ?? '',
+    seasonal_tag: editing?.seasonal_tag ?? '',
+    vip_only: editing?.vip_only ?? false,
     starts_at: editing?.starts_at?.slice(0, 16) ?? '',
     ends_at: editing?.ends_at?.slice(0, 16) ?? '',
     is_active: editing?.is_active ?? true,
@@ -217,6 +253,11 @@ function CouponForm({
       min_order_amount: Number(form.min_order_amount || 0),
       max_uses: form.max_uses ? Number(form.max_uses) : null,
       max_uses_per_customer: form.max_uses_per_customer ? Number(form.max_uses_per_customer) : null,
+      customer_segment: form.customer_segment,
+      geo_regions: form.geo_regions.split(',').map((v) => v.trim()).filter(Boolean),
+      product_ids: form.product_ids.split(',').map((v) => Number(v.trim())).filter(Boolean),
+      seasonal_tag: form.seasonal_tag || null,
+      vip_only: form.vip_only,
       starts_at: form.starts_at || null,
       ends_at: form.ends_at || null,
     };
@@ -271,6 +312,68 @@ function CouponForm({
             onChange={(e) => setForm({ ...form, value: parseFloat(e.target.value) })}
             className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1"
           />
+        </div>
+      </div>
+
+      <div className="border border-slate-100 rounded-lg p-3 space-y-3">
+        <div className="font-bold text-slate-800">الاستهداف الذكي</div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs font-bold text-slate-700">نوع العميل</label>
+            <select
+              value={form.customer_segment}
+              onChange={(e) => setForm({ ...form, customer_segment: e.target.value as AdminCoupon['customer_segment'] })}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1"
+            >
+              <option value="all">كل العملاء</option>
+              <option value="first_order">أول طلب</option>
+              <option value="returning">عملاء عائدون</option>
+              <option value="region">حسب المنطقة</option>
+              <option value="seasonal">موسمي</option>
+              <option value="product">منتجات محددة</option>
+              <option value="vip">VIP</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-700">وسم موسمي</label>
+            <input
+              value={form.seasonal_tag}
+              onChange={(e) => setForm({ ...form, seasonal_tag: e.target.value })}
+              placeholder="ramadan, eid, winter"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-bold text-slate-700">المناطق المستهدفة</label>
+          <input
+            value={form.geo_regions}
+            onChange={(e) => setForm({ ...form, geo_regions: e.target.value })}
+            placeholder="الخرطوم, بحري, أم درمان"
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-bold text-slate-700">أرقام المنتجات</label>
+          <input
+            dir="ltr"
+            value={form.product_ids}
+            onChange={(e) => setForm({ ...form, product_ids: e.target.value })}
+            placeholder="12, 18, 42"
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1"
+          />
+        </div>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={form.vip_only}
+            onChange={(e) => setForm({ ...form, vip_only: e.target.checked })}
+            className="rounded"
+          />
+          <span>VIP فقط</span>
+        </label>
+        <div className="text-xs text-slate-500 leading-6">
+          متغيرات متاحة في الرسائل: {'{code}'}، {'{value}'}، {'{min_order}'}، {'{ends_at}'}.
         </div>
       </div>
 
