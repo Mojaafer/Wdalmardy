@@ -1,8 +1,8 @@
 # Wad Almardi Market
 
-Bilingual (Arabic / English, RTL) e-commerce platform for **Wad Almardi Market** in Sudan, with a customer-facing storefront, WhatsApp ordering, and a forthcoming admin dashboard, POS, and ERP.
+Bilingual (Arabic / English, RTL) e-commerce platform for **Wad Almardi Market** in Sudan. It spans a customer-facing storefront with WhatsApp ordering, a full admin/ERP dashboard, and an in-branch POS — all on a shared Laravel API.
 
-This first PR ships the customer-facing storefront MVP and the supporting REST API.
+> **Status:** The storefront, admin dashboard, POS, inventory, loyalty, coupons, suppliers, and reporting modules are implemented and in active use. Multi-branch support is in progress. The native driver app (Phase 8) is not yet started. See [Implemented modules](#implemented-modules) and [Roadmap](#roadmap) below.
 
 ## Stack
 
@@ -22,14 +22,20 @@ Default locale: **ar** (RTL). English is a peer locale, not just a translation.
 
 ```
 .
-├── backend/          Laravel 11 API
-├── frontend/         Next.js 14 storefront
+├── backend/          Laravel 11 API (storefront + admin/POS/ERP endpoints)
+├── frontend/         Next.js 14 app (storefront under /[locale], admin under /admin)
 ├── docker-compose.yml  Local MySQL + phpMyAdmin
 ├── docs/
 │   ├── design/       UI/UX mockups (reference)
 │   └── PLAN.md       Architecture, data model, roadmap
+├── ui/               Original WhatsApp design mockups (47 screens, reference)
 └── README.md
 ```
+
+**Frontend layout**
+
+- `frontend/src/app/[locale]/` — customer storefront (ar/en, RTL/LTR)
+- `frontend/src/app/admin/(authed)/` — admin dashboard, POS, and ERP modules
 
 ## Local setup
 
@@ -90,27 +96,57 @@ NEXT_PUBLIC_WA_PHONE=249123456789  # WhatsApp number for wa.me links (no leading
 NEXT_PUBLIC_CURRENCY=ج.س
 ```
 
-## What's in this MVP
+## Implemented modules
 
-Customer storefront:
+### Customer storefront (`/[locale]`)
 
 - Home (hero, categories grid, offers, featured products, trust strip)
 - Store (`/store`) — product grid with category, price-range, and search filters
-- Product detail (`/store/[slug]`) — gallery, description, related products
-- Categories (`/categories`) and category page (`/categories/[slug]`)
-- Cart (`/cart`)
-- Checkout (`/checkout`) — WhatsApp order **or** Cash on Delivery
-- About, Contact (static)
+- Product detail (`/store/[slug]`, `/p/[slug]`) — gallery, description, related products
+- Categories (`/categories`) and category page
+- Cart (`/cart`) with quantity editing and recommendations
+- Checkout (`/checkout`) — WhatsApp order **or** Cash on Delivery, with loyalty points redemption
+- About, Contact, Account (order history)
 
-Backend API:
+### Admin dashboard & ERP (`/admin`)
+
+- **Dashboard** — KPIs (today's sales/profit/orders/avg order/new customers), sales chart, recent orders, low-stock alerts, customer stats
+- **Catalog** — products (with stock KPIs), categories, offers, barcodes
+- **Sales** — orders (status workflow + detail), invoices (preview + PDF), POS
+- **POS** — cashier screen, sessions, per-sale detail, Z-report
+- **Customers & loyalty** — customers, loyalty program, coupons (with targeting)
+- **Supply chain** — suppliers, branches (multi-branch, in progress), inventory + stock movements, quick-count inventory audits
+- **Operations** — employees, permissions (role-based), delivery, messages/support, notifications
+- **Content & insight** — pages (CMS), reports/analytics, audit log, system settings
+
+### Backend API
+
+Storefront (public):
 
 - `GET /api/categories`, `GET /api/categories/{slug}`
 - `GET /api/products`, `GET /api/products/{slug}` (filters: `category`, `q`, `min_price`, `max_price`, `sort`, `page`)
-- `POST /api/orders`
+- `POST /api/orders` (WhatsApp or COD, with loyalty side-effects)
+- Coupon redemption (`CouponController`)
 
-## Roadmap (not in this PR)
+Admin/ERP (Sanctum-authenticated, under `/api/admin/*`): products, categories, orders, customers, offers, coupons, suppliers, branches, employees, inventory, POS (sessions/sales/z-report), loyalty, invoices, reports, audit log, pages, settings, permissions.
 
-See [`docs/PLAN.md`](docs/PLAN.md). Next milestones: customer auth, account/orders, admin dashboard, POS, inventory, suppliers, ERP modules, driver app.
+## Roadmap
+
+See [`docs/PLAN.md`](docs/PLAN.md) for the full phased plan. Current status against it:
+
+| Phase | Module | Status |
+| ----- | ------ | ------ |
+| 1 | Storefront MVP | ✅ Done |
+| 2 | Customer accounts (auth, order history) | 🔶 Partial (account page exists; phone/OTP login not yet) |
+| 3 | Admin dashboard | ✅ Done |
+| 4 | Inventory & suppliers | ✅ Done (+ inventory audits) |
+| 5 | POS (in-branch) | ✅ Done (sessions, sales, z-report) |
+| 6 | ERP & finance | 🔶 Partial (invoices + reports; no chart of accounts / journal entries) |
+| 7 | Multi-branch | 🚧 In progress (branch + per-branch stock models added) |
+| 8 | Driver app & tracking | ❌ Not started (native app, deferred) |
+| 9 | Loyalty, coupons, marketing | ✅ Done |
+
+Design references for all storefront and admin screens live in [`ui/`](ui/) (47 mockups) and [`docs/design/`](docs/design/).
 
 ## Quality
 

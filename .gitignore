@@ -30,8 +30,12 @@ backend/database/*.sqlite-journal
 Thumbs.db
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
+
+# Windows reserved-name stray (device, not a file)
+nul
 
 # Logs
 *.log
