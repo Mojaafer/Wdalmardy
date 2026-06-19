@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class Order extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     public const STATUSES = ['new', 'preparing', 'shipped', 'delivered', 'cancelled'];
 
@@ -58,6 +59,7 @@ class Order extends Model
 
     protected $fillable = [
         'order_number',
+        'branch_id',
         'customer_id',
         'customer_name',
         'customer_phone',
@@ -95,6 +97,11 @@ class Order extends Model
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(Coupon::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function items(): HasMany

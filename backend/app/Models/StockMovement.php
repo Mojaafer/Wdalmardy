@@ -13,6 +13,7 @@ class StockMovement extends Model
 
     protected $fillable = [
         'product_id',
+        'branch_id',
         'type',
         'reason',
         'quantity',
@@ -34,6 +35,11 @@ class StockMovement extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -52,7 +58,9 @@ class StockMovement extends Model
         ?string $referenceType = null,
         ?int $referenceId = null,
         ?string $notes = null,
+        ?int $branchId = null,
     ): self {
+        $branchId ??= Branch::defaultId();
         $delta = match ($type) {
             'in' => abs($quantity),
             'out' => -abs($quantity),
@@ -63,8 +71,18 @@ class StockMovement extends Model
         $product->stock = max(0, (int) $product->stock + $delta);
         $product->save();
 
+        if ($branchId) {
+            $branchStock = BranchProductStock::firstOrCreate(
+                ['branch_id' => $branchId, 'product_id' => $product->id],
+                ['stock' => max(0, (int) $product->stock - $delta), 'reserved_stock' => 0, 'low_stock_threshold' => 10],
+            );
+            $branchStock->stock = max(0, (int) $branchStock->stock + $delta);
+            $branchStock->save();
+        }
+
         $movement = static::create([
             'product_id' => $product->id,
+            'branch_id' => $branchId,
             'type' => $type,
             'reason' => $reason,
             'quantity' => $delta,

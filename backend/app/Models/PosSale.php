@@ -14,6 +14,7 @@ class PosSale extends Model
 
     protected $fillable = [
         'sale_number',
+        'branch_id',
         'session_id',
         'cashier_id',
         'customer_id',
@@ -51,6 +52,11 @@ class PosSale extends Model
     public function session(): BelongsTo
     {
         return $this->belongsTo(PosSession::class, 'session_id');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function cashier(): BelongsTo

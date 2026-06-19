@@ -13,6 +13,7 @@ class PosSession extends Model
 
     protected $fillable = [
         'register',
+        'branch_id',
         'opened_by',
         'closed_by',
         'status',
@@ -42,6 +43,11 @@ class PosSession extends Model
     public function openedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'opened_by');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function closedBy(): BelongsTo
