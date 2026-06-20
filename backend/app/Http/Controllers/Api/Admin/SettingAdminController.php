@@ -7,6 +7,7 @@ use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class SettingAdminController extends Controller
 {
@@ -87,13 +88,56 @@ class SettingAdminController extends Controller
             // system
             ['key' => 'maintenance_mode', 'type' => 'boolean', 'group' => 'general', 'label' => 'وضع الصيانة'],
             ['key' => 'maintenance_message', 'type' => 'text', 'group' => 'general', 'label' => 'رسالة الصيانة'],
+            // backups
+            ['key' => 'backup_enabled', 'type' => 'boolean', 'group' => 'backup', 'label' => 'تفعيل النسخ الاحتياطي المجدول'],
+            ['key' => 'backup_frequency', 'type' => 'string', 'group' => 'backup', 'label' => 'التكرار (daily / weekly / monthly)'],
+            ['key' => 'backup_time', 'type' => 'string', 'group' => 'backup', 'label' => 'وقت التشغيل اليومي'],
+            ['key' => 'backup_retention_days', 'type' => 'integer', 'group' => 'backup', 'label' => 'مدة الاحتفاظ بالأيام'],
+            ['key' => 'backup_destination', 'type' => 'string', 'group' => 'backup', 'label' => 'الوجهة (local أو s3)'],
         ];
     }
 
-    public function backup()
+    public function backup(Request $request)
     {
-        // export DB-as-JSON (simple snapshot for MVP — not a SQL dump)
-        $payload = [
+        $payload = $this->backupPayload();
+        $filename = 'backup-'.now()->format('Ymd-His').'.json';
+
+        if ($request->boolean('store')) {
+            Storage::disk('local')->put('backups/'.$filename, json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+            return response()->json([
+                'data' => [
+                    'filename' => $filename,
+                    'path' => 'storage/app/backups/'.$filename,
+                    'size' => Storage::disk('local')->size('backups/'.$filename),
+                    'created_at' => now()->toIso8601String(),
+                ],
+            ]);
+        }
+
+        return response()->json($payload)
+            ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
+    }
+
+    public function backups()
+    {
+        $files = collect(Storage::disk('local')->files('backups'))
+            ->filter(fn ($path) => str_ends_with($path, '.json'))
+            ->sortByDesc(fn ($path) => Storage::disk('local')->lastModified($path))
+            ->values()
+            ->map(fn ($path) => [
+                'filename' => basename($path),
+                'path' => 'storage/app/'.$path,
+                'size' => Storage::disk('local')->size($path),
+                'created_at' => date(DATE_ATOM, Storage::disk('local')->lastModified($path)),
+            ]);
+
+        return response()->json(['data' => $files]);
+    }
+
+    private function backupPayload(): array
+    {
+        return [
             'generated_at' => now()->toIso8601String(),
             'settings' => Setting::all(),
             'products_count' => DB::table('products')->count(),
@@ -101,10 +145,5 @@ class SettingAdminController extends Controller
             'customers_count' => DB::table('customers')->count(),
             'invoices_count' => DB::table('invoices')->count(),
         ];
-
-        $filename = 'backup-'.now()->format('Ymd-His').'.json';
-
-        return response()->json($payload)
-            ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
     }
 }

@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Settings, Save, Download, Building2, CreditCard, Truck, Bell, Cog } from 'lucide-react';
+import { Settings, Save, Download, Building2, CreditCard, Truck, Bell, Cog, DatabaseBackup, Play } from 'lucide-react';
 import {
   getSettings,
   updateSettings,
   downloadBackup,
+  listBackups,
+  runBackup,
   type AdminSetting,
+  type BackupFile,
   type SettingsCatalogEntry,
   type SettingValue,
 } from '@/lib/admin/api';
@@ -17,6 +20,7 @@ const GROUP_LABELS: Record<string, string> = {
   delivery: 'التوصيل والمخزون',
   notifications: 'الإشعارات',
   general: 'النظام',
+  backup: 'النسخ الاحتياطي',
 };
 
 const GROUP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -25,9 +29,10 @@ const GROUP_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
   delivery: Truck,
   notifications: Bell,
   general: Cog,
+  backup: DatabaseBackup,
 };
 
-const GROUP_ORDER = ['brand', 'payment', 'delivery', 'notifications', 'general'];
+const GROUP_ORDER = ['brand', 'payment', 'delivery', 'notifications', 'general', 'backup'];
 
 export default function SettingsPage() {
   const [data, setData] = useState<Record<string, AdminSetting>>({});
@@ -36,6 +41,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [activeGroup, setActiveGroup] = useState<string>('brand');
   const [dirty, setDirty] = useState<Record<string, SettingValue>>({});
+  const [backups, setBackups] = useState<BackupFile[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -49,6 +55,8 @@ export default function SettingsPage() {
       const res = await getSettings();
       setData(res.data);
       setCatalog(res.catalog);
+      const backupRes = await listBackups();
+      setBackups(backupRes.data);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'تعذر تحميل الإعدادات');
     } finally {
@@ -108,6 +116,16 @@ export default function SettingsPage() {
     }
   }
 
+  async function storeBackup() {
+    try {
+      const res = await runBackup();
+      setBackups((prev) => [res.data, ...prev]);
+      setSuccess('تم إنشاء نسخة احتياطية محلية');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'تعذر إنشاء النسخة');
+    }
+  }
+
   const grouped = useMemo(() => {
     const m = new Map<string, SettingsCatalogEntry[]>();
     for (const e of catalog) {
@@ -136,6 +154,13 @@ export default function SettingsPage() {
           >
             <Download className="w-4 h-4" />
             تنزيل نسخة احتياطية
+          </button>
+          <button
+            onClick={storeBackup}
+            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2"
+          >
+            <Play className="w-4 h-4" />
+            تشغيل الآن
           </button>
           <button
             onClick={save}
@@ -201,6 +226,24 @@ export default function SettingsPage() {
                 />
               ))}
             </div>
+            {activeGroup === 'backup' && (
+              <div className="mt-6 border-t border-slate-100 pt-4">
+                <div className="font-bold text-slate-800 mb-3">آخر النسخ المحلية</div>
+                <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg">
+                  {backups.length === 0 ? (
+                    <div className="text-center text-slate-400 text-sm py-6">لا توجد نسخ محفوظة بعد</div>
+                  ) : backups.slice(0, 8).map((file) => (
+                    <div key={file.filename} className="px-3 py-2 flex items-center justify-between gap-3 text-sm">
+                      <div>
+                        <div className="font-mono text-slate-800" dir="ltr">{file.filename}</div>
+                        <div className="text-xs text-slate-500">{new Date(file.created_at).toLocaleString('ar-SD')}</div>
+                      </div>
+                      <span className="text-xs text-slate-500" dir="ltr">{Math.ceil(file.size / 1024)} KB</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         </div>
       )}

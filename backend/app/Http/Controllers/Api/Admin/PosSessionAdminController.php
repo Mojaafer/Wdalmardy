@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\EmployeeActivity;
 use App\Models\PosSale;
 use App\Models\PosSession;
@@ -55,6 +56,7 @@ class PosSessionAdminController extends Controller
     public function open(Request $request)
     {
         $data = $request->validate([
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
             'register' => ['nullable', 'string', 'max:60'],
             'opening_cash' => ['required', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -72,6 +74,7 @@ class PosSessionAdminController extends Controller
         }
 
         $session = PosSession::create([
+            'branch_id' => $data['branch_id'] ?? Branch::defaultId(),
             'register' => $data['register'] ?? 'main',
             'opened_by' => $request->user()->id,
             'opening_cash' => $data['opening_cash'],
@@ -196,6 +199,7 @@ class PosSessionAdminController extends Controller
         $payload = [
             'id' => $s->id,
             'register' => $s->register,
+            'branch_id' => $s->branch_id,
             'status' => $s->status,
             'opening_cash' => (float) $s->opening_cash,
             'closing_cash_expected' => $s->closing_cash_expected === null ? null : (float) $s->closing_cash_expected,

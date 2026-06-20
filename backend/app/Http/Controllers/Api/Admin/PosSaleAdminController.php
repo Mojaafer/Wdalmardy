@@ -136,6 +136,7 @@ class PosSaleAdminController extends Controller
 
             $sale = PosSale::create([
                 'sale_number' => PosSale::nextNumber(),
+                'branch_id' => $session->branch_id,
                 'session_id' => $session->id,
                 'cashier_id' => $request->user()->id,
                 'customer_id' => $customer?->id,
@@ -169,6 +170,7 @@ class PosSaleAdminController extends Controller
                     referenceType: 'pos_sale',
                     referenceId: $sale->id,
                     notes: 'بيع نقطة بيع '.$sale->sale_number,
+                    branchId: $sale->branch_id,
                 );
             }
 
@@ -207,6 +209,7 @@ class PosSaleAdminController extends Controller
                         referenceType: 'pos_sale_void',
                         referenceId: $sale->id,
                         notes: 'إرجاع نقطة بيع '.$sale->sale_number,
+                        branchId: $sale->branch_id,
                     );
                 }
             }
@@ -250,28 +253,38 @@ class PosSaleAdminController extends Controller
     public function lookupProduct(Request $request)
     {
         $q = trim($request->string('q')->toString());
-        if ($q === '') {
-            return response()->json(['data' => []]);
-        }
+        $categoryId = $request->integer('category_id') ?: null;
+        $limit = min(60, max(12, (int) $request->integer('limit', 30)));
+
         $products = Product::query()
             ->where('is_active', true)
-            ->where(function ($w) use ($q) {
-                $w->where('barcode', $q)
-                    ->orWhere('name_ar', 'like', "%$q%")
-                    ->orWhere('name_en', 'like', "%$q%")
-                    ->orWhere('slug', 'like', "%$q%");
+            ->when($categoryId, fn ($query) => $query->where('category_id', $categoryId))
+            ->when($request->boolean('featured'), fn ($query) => $query->where('is_featured', true))
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($w) use ($q) {
+                    $w->where('barcode', $q)
+                        ->orWhere('name_ar', 'like', "%$q%")
+                        ->orWhere('name_en', 'like', "%$q%")
+                        ->orWhere('slug', 'like', "%$q%");
+                });
             })
-            ->limit(20)
-            ->get(['id', 'slug', 'name_ar', 'name_en', 'barcode', 'price', 'stock']);
+            ->orderByDesc('is_featured')
+            ->orderBy('sort_order')
+            ->orderBy('name_ar')
+            ->limit($limit)
+            ->get(['id', 'category_id', 'slug', 'name_ar', 'name_en', 'barcode', 'image', 'price', 'stock', 'is_featured']);
 
         return response()->json([
             'data' => $products->map(fn (Product $p) => [
                 'id' => $p->id,
                 'slug' => $p->slug,
+                'category_id' => $p->category_id,
                 'name' => ['ar' => $p->name_ar, 'en' => $p->name_en],
                 'barcode' => $p->barcode,
+                'image' => $p->image,
                 'price' => (float) $p->price,
                 'stock' => (int) $p->stock,
+                'is_featured' => (bool) $p->is_featured,
             ]),
         ]);
     }
@@ -281,6 +294,7 @@ class PosSaleAdminController extends Controller
         $payload = [
             'id' => $sale->id,
             'sale_number' => $sale->sale_number,
+            'branch_id' => $sale->branch_id,
             'session_id' => $sale->session_id,
             'session' => $sale->relationLoaded('session') && $sale->session ? [
                 'id' => $sale->session->id,

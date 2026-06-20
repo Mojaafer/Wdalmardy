@@ -26,13 +26,29 @@ const PERM_GROUP_LABELS: Record<string, string> = {
   employees: 'الموظفين',
   reports: 'التقارير',
   settings: 'الإعدادات',
+  branches: 'الفروع',
   users: 'إدارة المستخدمين',
+  audit_logs: 'سجل التدقيق',
+  pos: 'نقطة البيع',
+  delivery: 'التوصيل',
+  pages: 'الصفحات',
+  messages: 'الرسائل',
+  invoices: 'الفواتير',
+  inventory: 'المخزون',
 };
 
 const PERM_LABELS: Record<string, string> = {
   view: 'عرض',
   manage: 'إدارة',
+  add: 'إضافة',
+  edit: 'تعديل',
+  delete: 'حذف',
+  export: 'تصدير',
+  print: 'طباعة',
+  operate: 'تشغيل',
 };
+
+const ACTIONS = ['view', 'add', 'edit', 'delete', 'export', 'print'] as const;
 
 export default function AdminPermissionsPage() {
   const [roles, setRoles] = useState<AdminRole[]>([]);
@@ -121,31 +137,72 @@ export default function AdminPermissionsPage() {
               صلاحيات دور <strong>{active.label}</strong> ({selected[active.name]?.size ?? 0} صلاحية)
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {Object.entries(groups).map(([group, perms]) => (
-                <div key={group} className="border border-slate-200 rounded-lg p-3">
-                  <div className="text-sm font-bold text-slate-800 mb-2">
-                    {PERM_GROUP_LABELS[group] ?? group}
-                  </div>
-                  <div className="space-y-1.5">
-                    {perms.map((perm) => {
-                      const action = perm.split('.')[1];
-                      return (
-                        <label key={perm} className="flex items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={selected[active.name]?.has(perm) ?? false}
-                            onChange={() => toggle(active.name, perm)}
-                            disabled={active.name === 'admin'}
-                            className="rounded"
-                          />
-                          <span className="text-slate-700">{PERM_LABELS[action] ?? action}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto border border-slate-200 rounded-lg">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-slate-500 text-xs">
+                  <tr>
+                    <th className="text-right px-4 py-3 font-medium min-w-44">الوحدة</th>
+                    {ACTIONS.map((action) => (
+                      <th key={action} className="text-center px-3 py-3 font-medium">
+                        {PERM_LABELS[action]}
+                      </th>
+                    ))}
+                    <th className="text-center px-3 py-3 font-medium">إدارة</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {Object.entries(groups).map(([group, perms]) => (
+                    <tr key={group} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 font-bold text-slate-800">
+                        {PERM_GROUP_LABELS[group] ?? group}
+                      </td>
+                      {ACTIONS.map((action) => {
+                        const perm = `${group}.${action}`;
+                        const exists = perms.includes(perm);
+                        return (
+                          <td key={perm} className="px-3 py-3 text-center">
+                            {exists ? (
+                              <input
+                                type="checkbox"
+                                title={`${PERM_GROUP_LABELS[group] ?? group} - ${PERM_LABELS[action]}`}
+                                checked={selected[active.name]?.has(perm) ?? false}
+                                onChange={() => toggle(active.name, perm)}
+                                disabled={active.name === 'admin'}
+                                className="rounded"
+                              />
+                            ) : (
+                              <span className="text-slate-200">—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                      <td className="px-3 py-3 text-center">
+                        {perms.includes(`${group}.manage`) || perms.includes(`${group}.operate`) ? (
+                          <label className="inline-flex items-center gap-1">
+                            {['manage', 'operate'].map((action) => {
+                              const perm = `${group}.${action}`;
+                              if (!perms.includes(perm)) return null;
+                              return (
+                                <input
+                                  key={perm}
+                                  type="checkbox"
+                                  title={PERM_LABELS[action]}
+                                  checked={selected[active.name]?.has(perm) ?? false}
+                                  onChange={() => toggle(active.name, perm)}
+                                  disabled={active.name === 'admin'}
+                                  className="rounded"
+                                />
+                              );
+                            })}
+                          </label>
+                        ) : (
+                          <span className="text-slate-200">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             <div className="flex justify-end pt-3 border-t border-slate-100">
