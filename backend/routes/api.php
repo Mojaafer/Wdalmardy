@@ -1,19 +1,22 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AuditLogAdminController;
-use App\Http\Controllers\Api\Admin\AuthController;
+use App\Http\Controllers\Api\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Api\Admin\BarcodeAdminController;
 use App\Http\Controllers\Api\Admin\BranchAdminController;
 use App\Http\Controllers\Api\Admin\CategoryAdminController;
+use App\Http\Controllers\Api\Admin\ChartOfAccountAdminController;
 use App\Http\Controllers\Api\Admin\CouponAdminController;
 use App\Http\Controllers\Api\Admin\CustomerAdminController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Admin\DeliveryZoneAdminController;
 use App\Http\Controllers\Api\Admin\DriverAdminController;
 use App\Http\Controllers\Api\Admin\EmployeeAdminController;
+use App\Http\Controllers\Api\Admin\ExpenseAdminController;
 use App\Http\Controllers\Api\Admin\InventoryAdminController;
 use App\Http\Controllers\Api\Admin\InventoryAuditAdminController;
 use App\Http\Controllers\Api\Admin\InvoiceAdminController;
+use App\Http\Controllers\Api\Admin\JournalEntryAdminController;
 use App\Http\Controllers\Api\Admin\LoyaltyAdminController;
 use App\Http\Controllers\Api\Admin\MessageAdminController;
 use App\Http\Controllers\Api\Admin\NotificationAdminController;
@@ -23,9 +26,11 @@ use App\Http\Controllers\Api\Admin\PageAdminController;
 use App\Http\Controllers\Api\Admin\PosSaleAdminController;
 use App\Http\Controllers\Api\Admin\PosSessionAdminController;
 use App\Http\Controllers\Api\Admin\ProductAdminController;
+use App\Http\Controllers\Api\Admin\PurchaseOrderAdminController;
 use App\Http\Controllers\Api\Admin\ReportsAdminController;
 use App\Http\Controllers\Api\Admin\SettingAdminController;
 use App\Http\Controllers\Api\Admin\SupplierAdminController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\DeliveryZoneController;
@@ -59,8 +64,24 @@ Route::get('/pages/{slug}', [PageController::class, 'show']);
 Route::post('/messages', [MessageController::class, 'store']);
 Route::get('/settings', [SettingController::class, 'public_index']);
 
+// Customer auth — public OTP endpoints
+Route::prefix('auth')->controller(AuthController::class)->group(function () {
+    Route::post('/request-otp', 'requestOtp');
+    Route::post('/verify-otp', 'verifyOtp');
+
+    // Protected customer self-service routes
+    Route::middleware(['auth:sanctum', 'customer'])->group(function () {
+        Route::get('/me', 'me');
+        Route::post('/logout', 'logout');
+        Route::put('/profile', 'updateProfile');
+        Route::get('/addresses', 'addresses');
+        Route::put('/addresses', 'updateAddresses');
+        Route::get('/orders', 'orders');
+    });
+});
+
 // Admin auth
-Route::post('/admin/login', [AuthController::class, 'login']);
+Route::post('/admin/login', [AdminAuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
@@ -219,6 +240,49 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
 
     Route::middleware('permission:reports.view')->group(function () {
         Route::get('/reports/summary', [ReportsAdminController::class, 'summary']);
+    });
+
+    // Expenses
+    Route::middleware('permission:expenses.view')->group(function () {
+        Route::get('/expenses', [ExpenseAdminController::class, 'index']);
+        Route::get('/expenses/{expense}', [ExpenseAdminController::class, 'show']);
+    });
+    Route::middleware('permission:expenses.manage')->group(function () {
+        Route::post('/expenses', [ExpenseAdminController::class, 'store']);
+        Route::put('/expenses/{expense}', [ExpenseAdminController::class, 'update']);
+        Route::delete('/expenses/{expense}', [ExpenseAdminController::class, 'destroy']);
+    });
+
+    // Chart of Accounts
+    Route::middleware('permission:chart_of_accounts.view')->group(function () {
+        Route::get('/chart-of-accounts', [ChartOfAccountAdminController::class, 'index']);
+        Route::get('/chart-of-accounts/{chartOfAccount}', [ChartOfAccountAdminController::class, 'show']);
+    });
+    Route::middleware('permission:chart_of_accounts.manage')->group(function () {
+        Route::post('/chart-of-accounts', [ChartOfAccountAdminController::class, 'store']);
+        Route::put('/chart-of-accounts/{chartOfAccount}', [ChartOfAccountAdminController::class, 'update']);
+        Route::delete('/chart-of-accounts/{chartOfAccount}', [ChartOfAccountAdminController::class, 'destroy']);
+    });
+
+    // Journal Entries
+    Route::middleware('permission:journal_entries.view')->group(function () {
+        Route::get('/journal-entries', [JournalEntryAdminController::class, 'index']);
+        Route::get('/journal-entries/{journalEntry}', [JournalEntryAdminController::class, 'show']);
+    });
+    Route::middleware('permission:journal_entries.manage')->group(function () {
+        Route::post('/journal-entries', [JournalEntryAdminController::class, 'store']);
+        Route::delete('/journal-entries/{journalEntry}', [JournalEntryAdminController::class, 'destroy']);
+    });
+
+    // Purchase Orders
+    Route::middleware('permission:purchase_orders.view')->group(function () {
+        Route::get('/purchase-orders', [PurchaseOrderAdminController::class, 'index']);
+        Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrderAdminController::class, 'show']);
+    });
+    Route::middleware('permission:purchase_orders.manage')->group(function () {
+        Route::post('/purchase-orders', [PurchaseOrderAdminController::class, 'store']);
+        Route::post('/purchase-orders/{purchaseOrder}/status', [PurchaseOrderAdminController::class, 'updateStatus']);
+        Route::delete('/purchase-orders/{purchaseOrder}', [PurchaseOrderAdminController::class, 'destroy']);
     });
 
     // Barcode management — reuses products.* permissions

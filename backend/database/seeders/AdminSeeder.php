@@ -35,12 +35,17 @@ class AdminSeeder extends Seeder
             'users.manage',
             'pos.operate', 'pos.manage',
             'audit_logs.view', 'audit_logs.export',
+            'expenses.view', 'expenses.manage',
+            'chart_of_accounts.view', 'chart_of_accounts.manage',
+            'journal_entries.view', 'journal_entries.manage',
+            'purchase_orders.view', 'purchase_orders.manage',
         ];
 
         $granularModules = [
             'products', 'categories', 'orders', 'customers', 'offers', 'coupons',
             'suppliers', 'employees', 'inventory', 'delivery', 'pages', 'messages',
             'invoices', 'reports', 'settings', 'branches', 'pos', 'audit_logs',
+            'expenses', 'chart_of_accounts', 'journal_entries', 'purchase_orders',
         ];
         foreach ($granularModules as $module) {
             foreach (['add', 'edit', 'delete', 'export', 'print'] as $action) {
@@ -66,6 +71,10 @@ class AdminSeeder extends Seeder
             'invoices.view', 'invoices.manage',
             'reports.view',
             'pos.operate', 'pos.manage',
+            'expenses.view', 'expenses.manage',
+            'chart_of_accounts.view', 'chart_of_accounts.manage',
+            'journal_entries.view', 'journal_entries.manage',
+            'purchase_orders.view', 'purchase_orders.manage',
         ]);
 
         $driver = Role::firstOrCreate(['name' => 'driver', 'guard_name' => 'web']);
