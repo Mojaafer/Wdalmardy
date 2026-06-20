@@ -33,7 +33,7 @@ class OfferController extends Controller
                 'description_en' => $o->description_en,
                 'discount_value' => (float) $o->discount_value,
                 'discount_unit' => $o->discount_unit,
-                'banner_image' => $o->banner_image,
+                'banner_image' => $o->bannerImageUrl(),
                 'banner_link' => $o->banner_link ?? '/ar/store',
                 'ends_at' => $o->ends_at?->toIso8601String(),
             ]),

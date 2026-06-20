@@ -348,6 +348,16 @@ export const toggleOffer = (id: number) =>
   request<{ data: AdminOffer }>(`/admin/offers/${id}/toggle`, { method: 'POST' });
 export const deleteOffer = (id: number) =>
   request<{ data: { ok: boolean } }>(`/admin/offers/${id}`, { method: 'DELETE' });
+export const uploadOfferBanner = (id: number, file: File) => {
+  const fd = new FormData();
+  fd.append('banner', file);
+  return request<{ data: AdminOffer }>(`/admin/offers/${id}/banner`, {
+    method: 'POST',
+    body: fd,
+  });
+};
+export const deleteOfferBanner = (id: number) =>
+  request<{ data: AdminOffer }>(`/admin/offers/${id}/banner`, { method: 'DELETE' });
 
 // Coupons
 export type AdminCoupon = {

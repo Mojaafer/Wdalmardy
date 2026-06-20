@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EmployeeActivity;
 use App\Models\Offer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class OfferAdminController extends Controller
 {
@@ -122,6 +123,32 @@ class OfferAdminController extends Controller
         return response()->json(['data' => $this->serialize($offer)]);
     }
 
+    public function uploadBanner(Request $request, Offer $offer)
+    {
+        $request->validate([
+            'banner' => 'required|image|mimes:jpeg,jpg,png,webp|max:2048',
+        ]);
+
+        if ($offer->banner_image && ! preg_match('/^https?:\/\//', $offer->banner_image)) {
+            Storage::disk('public')->delete($offer->banner_image);
+        }
+
+        $path = $request->file('banner')->store('offers', 'public');
+        $offer->update(['banner_image' => $path]);
+
+        return response()->json(['data' => $this->serialize($offer->fresh())]);
+    }
+
+    public function deleteBanner(Request $request, Offer $offer)
+    {
+        if ($offer->banner_image && ! preg_match('/^https?:\/\//', $offer->banner_image)) {
+            Storage::disk('public')->delete($offer->banner_image);
+        }
+        $offer->update(['banner_image' => null]);
+
+        return response()->json(['data' => $this->serialize($offer->fresh())]);
+    }
+
     private function validatedData(Request $request): array
     {
         return $request->validate([
@@ -158,7 +185,7 @@ class OfferAdminController extends Controller
             'max_discount' => $o->max_discount ? (float) $o->max_discount : null,
             'scope' => $o->scope,
             'scope_id' => $o->scope_id,
-            'banner_image' => $o->banner_image,
+            'banner_image' => $o->bannerImageUrl(),
             'banner_link' => $o->banner_link,
             'starts_at' => $o->starts_at?->toIso8601String(),
             'ends_at' => $o->ends_at?->toIso8601String(),

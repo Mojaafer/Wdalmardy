@@ -54,6 +54,21 @@ class Offer extends Model
         return true;
     }
 
+    public function bannerImageUrl(): ?string
+    {
+        if (! $this->banner_image) {
+            return null;
+        }
+        if (preg_match('/^https?:\/\//', $this->banner_image)) {
+            return $this->banner_image;
+        }
+
+        $base = rtrim(config('app.url'), '/');
+        $base = str_replace('http://', 'https://', $base);
+
+        return $base.'/storage/'.ltrim($this->banner_image, '/');
+    }
+
     public function status(): string
     {
         if (! $this->is_active) {

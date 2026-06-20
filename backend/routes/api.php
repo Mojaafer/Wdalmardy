@@ -142,6 +142,8 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::put('/offers/{offer}', [OfferAdminController::class, 'update']);
         Route::post('/offers/{offer}/toggle', [OfferAdminController::class, 'toggle']);
         Route::delete('/offers/{offer}', [OfferAdminController::class, 'destroy']);
+        Route::post('/offers/{offer}/banner', [OfferAdminController::class, 'uploadBanner']);
+        Route::delete('/offers/{offer}/banner', [OfferAdminController::class, 'deleteBanner']);
     });
 
     Route::middleware('permission:coupons.view')->group(function () {

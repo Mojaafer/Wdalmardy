@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState, useRef, FormEvent } from 'react';
 import {
   listOffers,
   createOffer,
   updateOffer,
   toggleOffer,
   deleteOffer,
+  uploadOfferBanner,
+  deleteOfferBanner,
   type AdminOffer,
   type OfferStats,
   AdminApiError,
@@ -248,15 +250,18 @@ function OfferForm({
     discount_unit: editing?.discount_unit ?? 'percent',
     max_discount: editing?.max_discount ?? '',
     scope: editing?.scope ?? 'all',
-    banner_image: editing?.banner_image ?? '',
     banner_link: editing?.banner_link ?? '',
     starts_at: editing?.starts_at?.slice(0, 16) ?? '',
     ends_at: editing?.ends_at?.slice(0, 16) ?? '',
     is_active: editing?.is_active ?? true,
     priority: editing?.priority ?? 0,
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(editing?.banner_image ?? null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -272,17 +277,51 @@ function OfferForm({
       title_en: form.title_en || null,
       description: form.description || null,
       description_en: form.description_en || null,
-      banner_image: form.banner_image || null,
       banner_link: form.banner_link || null,
     };
     try {
-      if (editing) await updateOffer(editing.id, payload);
-      else await createOffer(payload);
+      let offerId = editing?.id;
+      if (editing) {
+        await updateOffer(editing.id, payload);
+      } else {
+        const created = await createOffer(payload);
+        offerId = created.data.id;
+      }
+      if (selectedFile && offerId) {
+        setUploadingBanner(true);
+        await uploadOfferBanner(offerId, selectedFile);
+      }
       onDone();
     } catch (e: unknown) {
       setErr(e instanceof AdminApiError ? e.message : 'خطأ غير متوقع');
     } finally {
       setSubmitting(false);
+      setUploadingBanner(false);
+    }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
+    setBannerPreview(URL.createObjectURL(file));
+  }
+
+  async function handleRemoveBanner() {
+    if (editing?.id) {
+      setSubmitting(true);
+      try {
+        await deleteOfferBanner(editing.id);
+        setSelectedFile(null);
+        setBannerPreview(null);
+      } catch (e: unknown) {
+        setErr(e instanceof AdminApiError ? e.message : 'خطأ');
+      } finally {
+        setSubmitting(false);
+      }
+    } else {
+      setSelectedFile(null);
+      setBannerPreview(null);
     }
   }
 
@@ -381,13 +420,41 @@ function OfferForm({
       {form.type === 'banner' && (
         <>
           <div>
-            <label className="text-xs font-bold text-slate-700">رابط صورة البانر</label>
+            <label className="text-xs font-bold text-slate-700">صورة البانر</label>
             <input
-              type="text"
-              value={form.banner_image}
-              onChange={(e) => setForm({ ...form, banner_image: e.target.value })}
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1"
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleFileChange}
+              className="hidden"
             />
+            {bannerPreview ? (
+              <div className="relative inline-block mt-1">
+                <img
+                  src={bannerPreview}
+                  alt="banner preview"
+                  className="w-full h-32 object-cover rounded-lg border border-slate-200"
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveBanner}
+                  className="absolute -top-2 -right-2 bg-rose-500 text-white w-6 h-6 rounded-full text-xs grid place-items-center shadow"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="w-full h-32 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 hover:border-[#0E5C3A] hover:text-[#0E5C3A] grid place-items-center text-sm transition-colors mt-1"
+              >
+                اختر صورة البانر
+              </button>
+            )}
+            {selectedFile && (
+              <p className="text-xs text-slate-500 mt-1">{selectedFile.name}</p>
+            )}
           </div>
           <div>
             <label className="text-xs font-bold text-slate-700">رابط البانر عند الضغط</label>
@@ -413,10 +480,10 @@ function OfferForm({
 
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || uploadingBanner}
         className="w-full bg-[#0E5C3A] text-white rounded-lg py-2.5 font-bold disabled:opacity-60"
       >
-        {submitting ? 'جارٍ الحفظ...' : editing ? 'حفظ التعديلات' : 'إضافة العرض'}
+        {submitting || uploadingBanner ? 'جارٍ الحفظ...' : editing ? 'حفظ التعديلات' : 'إضافة العرض'}
       </button>
     </form>
   );
