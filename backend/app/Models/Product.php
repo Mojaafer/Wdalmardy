@@ -68,10 +68,13 @@ class Product extends Model
         if (! $this->image) {
             return null;
         }
-        if (str_starts_with($this->image, 'http')) {
+        if (preg_match('/^https?:\/\//', $this->image)) {
             return $this->image;
         }
 
-        return url('/storage/'.ltrim($this->image, '/'));
+        $base = rtrim(config('app.url'), '/');
+        $base = str_replace('http://', 'https://', $base);
+
+        return $base.'/storage/'.ltrim($this->image, '/');
     }
 }
