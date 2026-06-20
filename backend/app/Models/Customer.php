@@ -6,11 +6,13 @@ use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\HasApiTokens;
 
 class Customer extends Model
 {
-    use Auditable, HasFactory;
+    use Auditable, HasApiTokens, HasFactory;
 
     public const TIERS = [
         ['key' => 'bronze', 'label' => 'برونزي', 'min' => 0, 'color' => '#a16207'],
@@ -18,6 +20,8 @@ class Customer extends Model
         ['key' => 'gold', 'label' => 'ذهبي', 'min' => 2000, 'color' => '#eab308'],
         ['key' => 'platinum', 'label' => 'بلاتيني', 'min' => 10000, 'color' => '#7c3aed'],
     ];
+
+    public const OTP_TTL_MINUTES = 10;
 
     protected $fillable = [
         'name',
@@ -30,6 +34,8 @@ class Customer extends Model
         'total_spent',
         'loyalty_points',
         'lifetime_points',
+        'otp_code',
+        'otp_expires_at',
     ];
 
     protected $casts = [
@@ -38,6 +44,12 @@ class Customer extends Model
         'total_spent' => 'decimal:2',
         'loyalty_points' => 'integer',
         'lifetime_points' => 'integer',
+        'otp_expires_at' => 'datetime',
+    ];
+
+    protected $hidden = [
+        'otp_code',
+        'otp_expires_at',
     ];
 
     public function orders(): HasMany
@@ -102,5 +114,63 @@ class Customer extends Model
             'balance_after' => (int) $this->loyalty_points,
             'reason' => $reason,
         ]);
+    }
+
+    /**
+     * Generate a fresh 4-digit OTP, store it with a 10-minute expiry,
+     * and return the plaintext code so the caller can deliver it
+     * (SMS / WhatsApp). In simplified/dev mode the caller returns it
+     * directly in the API response.
+     */
+    public function generateOtp(): string
+    {
+        $code = str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
+
+        $this->forceFill([
+            'otp_code' => $code,
+            'otp_expires_at' => Carbon::now()->addMinutes(self::OTP_TTL_MINUTES),
+        ])->save();
+
+        return $code;
+    }
+
+    public function verifyOtp(string $code): bool
+    {
+        if (empty($this->otp_code) || empty($this->otp_expires_at)) {
+            return false;
+        }
+
+        return hash_equals((string) $this->otp_code, $code)
+            && $this->otp_expires_at->isFuture();
+    }
+
+    public function clearOtp(): void
+    {
+        $this->forceFill([
+            'otp_code' => null,
+            'otp_expires_at' => null,
+        ])->save();
+    }
+
+    /**
+     * Public payload returned to the storefront after login / profile fetch.
+     */
+    public function toAuthArray(): array
+    {
+        $tier = $this->tier();
+
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'phone' => $this->phone,
+            'email' => $this->email,
+            'city' => $this->city,
+            'addresses' => $this->addresses ?? [],
+            'total_orders' => (int) $this->total_orders,
+            'total_spent' => (float) $this->total_spent,
+            'loyalty_points' => (int) $this->loyalty_points,
+            'lifetime_points' => (int) $this->lifetime_points,
+            'tier' => $tier,
+        ];
     }
 }
