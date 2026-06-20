@@ -25,6 +25,10 @@ import {
   Award,
   ScanLine,
   ClipboardList,
+  Wallet,
+  BookOpen,
+  ScrollText,
+  ShoppingBag,
   type LucideIcon,
 } from 'lucide-react';
 import type { AdminUser } from '@/lib/admin/api';
@@ -59,6 +63,10 @@ export default function Sidebar({ user }: { user: AdminUser }) {
       { href: '/admin/delivery', label: 'إدارة التوصيل', icon: Truck, permission: 'delivery.view' },
       { href: '/admin/pos', label: 'نقطة البيع', icon: ScanLine, permission: 'pos.operate' },
       { href: '/admin/invoices', label: 'الفواتير', icon: Receipt, permission: 'invoices.view' },
+      { href: '/admin/expenses', label: 'المصروفات', icon: Wallet, permission: 'expenses.view' },
+      { href: '/admin/chart-of-accounts', label: 'دليل الحسابات', icon: BookOpen, permission: 'chart_of_accounts.view' },
+      { href: '/admin/journal-entries', label: 'قيود اليومية', icon: ScrollText, permission: 'journal_entries.view' },
+      { href: '/admin/purchase-orders', label: 'أوامر الشراء', icon: ShoppingBag, permission: 'purchase_orders.view' },
       { href: '/admin/messages', label: 'الرسائل والدعم', icon: Inbox, permission: 'messages.view' },
       { href: '/admin/pages', label: 'الصفحات', icon: FileText, permission: 'pages.view' },
       { href: '/admin/reports', label: 'التقارير', icon: BarChart3, permission: 'reports.view' },

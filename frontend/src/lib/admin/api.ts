@@ -960,6 +960,151 @@ export const lookupBarcode = (code: string) =>
     `/admin/barcodes/lookup?code=${encodeURIComponent(code)}`,
   );
 
+// ---------- ERP & Finance ----------
+
+// Expenses
+export type AdminExpense = {
+  id: number;
+  category: string;
+  amount: number;
+  description: string | null;
+  date: string;
+  receipt_path: string | null;
+  created_by: number | null;
+  creator?: { id: number; name: string } | null;
+  created_at: string;
+};
+export type ExpenseMeta = {
+  total: number;
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total_amount: number;
+  by_category: Record<string, number>;
+};
+export const listExpenses = (params: Record<string, string | number> = {}) => {
+  const qs = new URLSearchParams(params as Record<string, string>).toString();
+  return request<{ data: AdminExpense[]; meta: ExpenseMeta }>(`/admin/expenses${qs ? `?${qs}` : ''}`);
+};
+export const getExpense = (id: number) => request<{ data: AdminExpense }>(`/admin/expenses/${id}`);
+export const createExpense = (body: Record<string, unknown>) =>
+  request<{ data: AdminExpense }>('/admin/expenses', { method: 'POST', body: JSON.stringify(body) });
+export const updateExpense = (id: number, body: Record<string, unknown>) =>
+  request<{ data: AdminExpense }>(`/admin/expenses/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+export const deleteExpense = (id: number) =>
+  request<{ data: { deleted: boolean } }>(`/admin/expenses/${id}`, { method: 'DELETE' });
+
+// Chart of Accounts
+export type ChartOfAccount = {
+  id: number;
+  code: string;
+  name_ar: string;
+  name_en: string | null;
+  type: 'asset' | 'liability' | 'equity' | 'income' | 'expense';
+  parent_id: number | null;
+  parent?: { id: number; code: string; name_ar: string } | null;
+  children?: ChartOfAccount[];
+  is_active: boolean;
+  description: string | null;
+  sort_order: number;
+};
+export type ChartOfAccountMeta = { types: string[] };
+export const listChartOfAccounts = (params: Record<string, string | number> = {}) => {
+  const qs = new URLSearchParams(params as Record<string, string>).toString();
+  return request<{ data: ChartOfAccount[]; meta: ChartOfAccountMeta }>(`/admin/chart-of-accounts${qs ? `?${qs}` : ''}`);
+};
+export const getChartOfAccount = (id: number) => request<{ data: ChartOfAccount }>(`/admin/chart-of-accounts/${id}`);
+export const createChartOfAccount = (body: Record<string, unknown>) =>
+  request<{ data: ChartOfAccount }>('/admin/chart-of-accounts', { method: 'POST', body: JSON.stringify(body) });
+export const updateChartOfAccount = (id: number, body: Record<string, unknown>) =>
+  request<{ data: ChartOfAccount }>(`/admin/chart-of-accounts/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+export const deleteChartOfAccount = (id: number) =>
+  request<{ data: { deleted: boolean } }>(`/admin/chart-of-accounts/${id}`, { method: 'DELETE' });
+
+// Journal Entries
+export type JournalEntryLine = {
+  id: number;
+  journal_entry_id: number;
+  account_id: number;
+  account?: { id: number; code: string; name_ar: string };
+  type: 'debit' | 'credit';
+  amount: number;
+  description: string | null;
+};
+export type JournalEntry = {
+  id: number;
+  entry_number: string;
+  description: string;
+  date: string;
+  notes: string | null;
+  created_by: number | null;
+  creator?: { id: number; name: string } | null;
+  lines?: JournalEntryLine[];
+  created_at: string;
+};
+export const listJournalEntries = (params: Record<string, string | number> = {}) => {
+  const qs = new URLSearchParams(params as Record<string, string>).toString();
+  return request<{ data: JournalEntry[]; meta: { total: number; current_page: number; last_page: number } }>(
+    `/admin/journal-entries${qs ? `?${qs}` : ''}`,
+  );
+};
+export const getJournalEntry = (id: number) => request<{ data: JournalEntry }>(`/admin/journal-entries/${id}`);
+export const createJournalEntry = (body: Record<string, unknown>) =>
+  request<{ data: JournalEntry }>('/admin/journal-entries', { method: 'POST', body: JSON.stringify(body) });
+export const deleteJournalEntry = (id: number) =>
+  request<{ data: { deleted: boolean } }>(`/admin/journal-entries/${id}`, { method: 'DELETE' });
+
+// Purchase Orders
+export type PurchaseOrderItem = {
+  id: number;
+  purchase_order_id: number;
+  product_id: number;
+  product?: { id: number; name_ar: string; name_en: string | null; unit: string | null };
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  received_quantity: number;
+};
+export type PurchaseOrder = {
+  id: number;
+  po_number: string;
+  supplier_id: number;
+  supplier?: { id: number; name: string };
+  status: 'draft' | 'sent' | 'confirmed' | 'received' | 'cancelled';
+  subtotal: number;
+  tax_amount: number;
+  total: number;
+  notes: string | null;
+  created_by: number | null;
+  creator?: { id: number; name: string } | null;
+  received_at: string | null;
+  items?: PurchaseOrderItem[];
+  created_at: string;
+};
+export type PurchaseOrderMeta = {
+  total: number;
+  current_page: number;
+  last_page: number;
+  total_pending: number;
+  total_received: number;
+};
+export const listPurchaseOrders = (params: Record<string, string | number> = {}) => {
+  const qs = new URLSearchParams(params as Record<string, string>).toString();
+  return request<{ data: PurchaseOrder[]; meta: PurchaseOrderMeta }>(
+    `/admin/purchase-orders${qs ? `?${qs}` : ''}`,
+  );
+};
+export const getPurchaseOrder = (id: number) => request<{ data: PurchaseOrder }>(`/admin/purchase-orders/${id}`);
+export const createPurchaseOrder = (body: Record<string, unknown>) =>
+  request<{ data: PurchaseOrder }>('/admin/purchase-orders', { method: 'POST', body: JSON.stringify(body) });
+export const updatePurchaseOrderStatus = (id: number, status: string) =>
+  request<{ data: PurchaseOrder }>(`/admin/purchase-orders/${id}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status }),
+  });
+export const deletePurchaseOrder = (id: number) =>
+  request<{ data: { deleted: boolean } }>(`/admin/purchase-orders/${id}`, { method: 'DELETE' });
+
 // Loyalty
 export type LoyaltyTier = {
   key: 'bronze' | 'silver' | 'gold' | 'platinum' | string;

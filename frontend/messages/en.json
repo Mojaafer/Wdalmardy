@@ -12,6 +12,8 @@
     "about": "About",
     "contact": "Contact",
     "account": "Account",
+    "login": "Login",
+    "logout": "Log out",
     "cart": "Cart",
     "search_placeholder": "Search for a product...",
     "language": "العربية"
