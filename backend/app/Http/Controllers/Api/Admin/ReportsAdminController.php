@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\Expense;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -28,6 +29,9 @@ class ReportsAdminController extends Controller
         $totalDiscount = (float) (clone $orders)->sum('discount_amount');
 
         $newCustomers = Customer::whereBetween('created_at', [$from, $to])->count();
+
+        // actual expenses in the period
+        $totalExpenses = (float) Expense::whereBetween('date', [$from, $to])->sum('amount');
 
         // sales by day
         $byDay = (clone $orders)
@@ -116,7 +120,8 @@ class ReportsAdminController extends Controller
                     'avg_order' => round($avgOrder, 2),
                     'discount' => $totalDiscount,
                     'new_customers' => $newCustomers,
-                    'estimated_profit' => round($totalSales * 0.15, 2),
+                    'total_expenses' => $totalExpenses,
+                    'estimated_profit' => round($totalSales - $totalExpenses, 2),
                 ],
                 'sales_by_day' => $byDay,
                 'top_products' => $topProducts,

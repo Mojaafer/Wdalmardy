@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\Expense;
 use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Support\Carbon;
@@ -21,6 +22,9 @@ class DashboardController extends Controller
 
         $todaySales = (float) $todayOrders->clone()->where('status', '!=', 'cancelled')->sum('total');
         $yesterdaySales = (float) $yesterdayOrders->clone()->where('status', '!=', 'cancelled')->sum('total');
+
+        $todayExpenses = (float) Expense::whereDate('date', $todayStart)->sum('amount');
+        $yesterdayExpenses = (float) Expense::whereDate('date', $yesterdayStart)->sum('amount');
 
         $todayCount = (int) $todayOrders->clone()->count();
         $yesterdayCount = (int) $yesterdayOrders->clone()->count();
@@ -61,7 +65,7 @@ class DashboardController extends Controller
             'data' => [
                 'kpis' => [
                     'sales' => ['today' => $todaySales, 'yesterday' => $yesterdaySales],
-                    'profit' => ['today' => round($todaySales * 0.15, 2), 'yesterday' => round($yesterdaySales * 0.15, 2)],
+                    'profit' => ['today' => round($todaySales - $todayExpenses, 2), 'yesterday' => round($yesterdaySales - $yesterdayExpenses, 2)],
                     'orders' => ['today' => $todayCount, 'yesterday' => $yesterdayCount],
                     'avg_order' => ['today' => round($avgOrder, 2), 'yesterday' => round($avgOrderYesterday, 2)],
                     'new_customers' => ['today' => $newCustomers, 'yesterday' => $newCustomersYesterday],
