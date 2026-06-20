@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState, FormEvent } from 'react';
+import { useEffect, useMemo, useState, useRef, FormEvent } from 'react';
 import {
   listProducts,
   listCategories,
   createProduct,
   updateProduct,
   deleteProduct,
+  uploadProductImage,
+  deleteProductImage,
   type AdminProduct,
   type AdminCategory,
   AdminApiError,
@@ -285,7 +287,6 @@ function ProductForm({
     description_en: editing?.description.en ?? '',
     unit_ar: editing?.unit.ar ?? '',
     unit_en: editing?.unit.en ?? '',
-    image: editing?.image ?? '',
     barcode: editing?.barcode ?? '',
     price: editing?.price ?? 0,
     compare_at_price: editing?.compare_at_price ?? '',
@@ -293,8 +294,12 @@ function ProductForm({
     is_featured: editing?.is_featured ?? false,
     is_active: editing?.is_active ?? true,
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(editing?.image ?? null);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -311,8 +316,17 @@ function ProductForm({
       stock: Number(form.stock),
     };
     try {
-      if (editing) await updateProduct(editing.id, payload);
-      else await createProduct(payload);
+      let productId = editing?.id;
+      if (editing) {
+        await updateProduct(editing.id, payload);
+      } else {
+        const created = await createProduct(payload);
+        productId = created.data.id;
+      }
+      if (selectedFile && productId) {
+        setUploadingImage(true);
+        await uploadProductImage(productId, selectedFile);
+      }
       onDone();
     } catch (err) {
       if (err instanceof AdminApiError) {
@@ -322,6 +336,34 @@ function ProductForm({
       }
     } finally {
       setSaving(false);
+      setUploadingImage(false);
+    }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  async function handleRemoveImage() {
+    if (editing?.id) {
+      setSaving(true);
+      try {
+        await deleteProductImage(editing.id);
+        setSelectedFile(null);
+        setPreviewUrl(null);
+      } catch (err) {
+        if (err instanceof AdminApiError) {
+          setError(Object.values(err.errors ?? {}).flat()[0] ?? err.message);
+        }
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      setSelectedFile(null);
+      setPreviewUrl(null);
     }
   }
 
@@ -382,14 +424,41 @@ function ProductForm({
         </Field>
       </div>
 
-      <Field label="رابط الصورة (اختياري)">
+      <Field label="الصورة">
         <input
-          value={form.image ?? ''}
-          onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
-          placeholder="https://..."
-          dir="ltr"
-          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleFileChange}
+          className="hidden"
         />
+        {previewUrl ? (
+          <div className="relative inline-block">
+            <img
+              src={previewUrl}
+              alt="product preview"
+              className="w-32 h-32 object-cover rounded-lg border border-slate-200"
+            />
+            <button
+              type="button"
+              onClick={handleRemoveImage}
+              className="absolute -top-2 -right-2 bg-rose-500 text-white w-6 h-6 rounded-full text-xs grid place-items-center shadow"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="w-32 h-32 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 hover:border-[#0E5C3A] hover:text-[#0E5C3A] grid place-items-center text-sm transition-colors"
+          >
+            اختر صورة
+          </button>
+        )}
+        {selectedFile && (
+          <p className="text-xs text-slate-500 mt-1">{selectedFile.name}</p>
+        )}
       </Field>
 
       <Field label="رقم الباركود (اختياري)">
@@ -469,10 +538,10 @@ function ProductForm({
 
       <button
         type="submit"
-        disabled={saving}
+        disabled={saving || uploadingImage}
         className="w-full bg-[#0E5C3A] hover:bg-[#0a4429] text-white font-bold py-2.5 rounded-lg disabled:opacity-60"
       >
-        {saving ? 'جاري الحفظ...' : editing ? 'حفظ التعديلات' : 'إضافة المنتج'}
+        {saving || uploadingImage ? 'جاري الحفظ...' : editing ? 'حفظ التعديلات' : 'إضافة المنتج'}
       </button>
     </form>
   );

@@ -62,4 +62,16 @@ class Product extends Model
     {
         return $query->where('is_featured', true);
     }
+
+    public function imageUrl(): ?string
+    {
+        if (! $this->image) {
+            return null;
+        }
+        if (str_starts_with($this->image, 'http')) {
+            return $this->image;
+        }
+
+        return url('/storage/'.ltrim($this->image, '/'));
+    }
 }

@@ -25,7 +25,7 @@ class ProductResource extends JsonResource
                 'ar' => $this->unit_ar,
                 'en' => $this->unit_en,
             ],
-            'image' => $this->image,
+            'image' => $this->imageUrl(),
             'images' => $this->whenLoaded('images', fn () => $this->images->pluck('url')),
             'price' => (float) $this->price,
             'compare_at_price' => $this->compare_at_price !== null ? (float) $this->compare_at_price : null,

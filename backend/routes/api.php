@@ -97,6 +97,8 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::post('/products', [ProductAdminController::class, 'store']);
         Route::put('/products/{product}', [ProductAdminController::class, 'update']);
         Route::delete('/products/{product}', [ProductAdminController::class, 'destroy']);
+        Route::post('/products/{product}/image', [ProductAdminController::class, 'uploadImage']);
+        Route::delete('/products/{product}/image', [ProductAdminController::class, 'deleteImage']);
     });
 
     Route::middleware('permission:categories.view')->group(function () {

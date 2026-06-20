@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -87,6 +88,32 @@ class ProductAdminController extends Controller
         $product->delete();
 
         return response()->json(['data' => ['ok' => true]]);
+    }
+
+    public function uploadImage(Request $request, Product $product)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,jpg,png,webp|max:2048',
+        ]);
+
+        if ($product->image && ! str_starts_with($product->image, 'http')) {
+            Storage::disk('public')->delete($product->image);
+        }
+
+        $path = $request->file('image')->store('products', 'public');
+        $product->update(['image' => $path]);
+
+        return response()->json(['data' => new ProductResource($product->load('category'))]);
+    }
+
+    public function deleteImage(Request $request, Product $product)
+    {
+        if ($product->image && ! str_starts_with($product->image, 'http')) {
+            Storage::disk('public')->delete($product->image);
+        }
+        $product->update(['image' => null]);
+
+        return response()->json(['data' => new ProductResource($product->load('category'))]);
     }
 
     private function validatedData(Request $request, ?int $ignoreId = null): array

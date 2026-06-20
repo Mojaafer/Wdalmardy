@@ -165,6 +165,16 @@ export const updateProduct = (id: number, body: Record<string, unknown>) =>
   request<{ data: AdminProduct }>(`/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(body) });
 export const deleteProduct = (id: number) =>
   request<{ data: { ok: boolean } }>(`/admin/products/${id}`, { method: 'DELETE' });
+export const uploadProductImage = (id: number, file: File) => {
+  const fd = new FormData();
+  fd.append('image', file);
+  return request<{ data: AdminProduct }>(`/admin/products/${id}/image`, {
+    method: 'POST',
+    body: fd,
+  });
+};
+export const deleteProductImage = (id: number) =>
+  request<{ data: AdminProduct }>(`/admin/products/${id}/image`, { method: 'DELETE' });
 
 // Categories
 export type AdminCategory = {
