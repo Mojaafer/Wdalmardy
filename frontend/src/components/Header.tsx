@@ -1,13 +1,14 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Search, User, Menu, X, Globe } from 'lucide-react';
+import { Search, User, Menu, X, Globe, LogIn } from 'lucide-react';
 import { useState } from 'react';
 import { Link, usePathname } from '@/i18n/routing';
 import { useParams } from 'next/navigation';
 import { Logo } from './Logo';
 import { CartBadge } from './CartBadge';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/customer/useAuth';
 
 const NAV = [
   { key: 'home', href: '/' },
@@ -23,6 +24,7 @@ export function Header() {
   const { locale } = useParams<{ locale: string }>();
   const otherLocale = locale === 'ar' ? 'en' : 'ar';
   const [open, setOpen] = useState(false);
+  const { isAuthenticated, customer } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
@@ -51,13 +53,23 @@ export function Header() {
             <Globe className="h-4 w-4" />
             {t('language')}
           </a>
-          <Link
-            href="/account"
-            className="hidden sm:inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium hover:bg-gray-100"
-          >
-            <User className="h-4 w-4" />
-            {t('account')}
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              href="/account"
+              className="hidden sm:inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium hover:bg-gray-100"
+            >
+              <User className="h-4 w-4" />
+              {customer?.name || t('account')}
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="hidden sm:inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium hover:bg-gray-100"
+            >
+              <LogIn className="h-4 w-4" />
+              {t('login')}
+            </Link>
+          )}
           <CartBadge />
           <button
             onClick={() => setOpen((v) => !v)}
@@ -107,6 +119,25 @@ export function Header() {
               </li>
             ))}
             <li className="border-t border-gray-100 mt-2 pt-2">
+              {isAuthenticated ? (
+                <Link
+                  href="/account"
+                  onClick={() => setOpen(false)}
+                  className="block py-3 text-sm font-medium"
+                >
+                  <User className="inline h-4 w-4 me-1" /> {t('account')}
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="block py-3 text-sm font-medium"
+                >
+                  <LogIn className="inline h-4 w-4 me-1" /> {locale === 'ar' ? 'دخول' : 'Login'}
+                </Link>
+              )}
+            </li>
+            <li>
               <a href={`/${otherLocale}`} className="block py-3 text-sm font-medium">
                 <Globe className="inline h-4 w-4 me-1" /> {t('language')}
               </a>

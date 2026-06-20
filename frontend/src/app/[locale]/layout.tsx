@@ -7,6 +7,7 @@ import { routing, type Locale } from '@/i18n/routing';
 import { Header } from '@/components/Header';
 import { TrustStrip } from '@/components/TrustStrip';
 import { Footer } from '@/components/Footer';
+import { AuthProvider } from '@/lib/customer/useAuth';
 import '../globals.css';
 
 const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' });
@@ -46,10 +47,12 @@ export default async function LocaleLayout({
         }}
       >
         <NextIntlClientProvider messages={messages} locale={locale}>
-          <Header />
-          <TrustStrip />
-          <main>{children}</main>
-          <Footer />
+          <AuthProvider>
+            <Header />
+            <TrustStrip />
+            <main>{children}</main>
+            <Footer />
+          </AuthProvider>
         </NextIntlClientProvider>
       </body>
     </html>

@@ -59,7 +59,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const text = await res.text().catch(() => '');
     if (text) {
       try {
-        const body = JSON.parse(text) as { message?: unknown };
+        const body = JSON.parse(text) as { message?: unknown; errors?: Record<string, string[]> };
         if (typeof body.message === 'string') {
           message = body.message;
         } else {
@@ -240,3 +240,5 @@ export async function submitContactMessage(input: {
     body: JSON.stringify(input),
   });
 }
+
+
