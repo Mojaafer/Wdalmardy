@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Api\Admin\AuthController;
 use App\Http\Controllers\Api\Admin\AuditLogAdminController;
+use App\Http\Controllers\Api\Admin\AuthController;
 use App\Http\Controllers\Api\Admin\BarcodeAdminController;
 use App\Http\Controllers\Api\Admin\BranchAdminController;
 use App\Http\Controllers\Api\Admin\CategoryAdminController;

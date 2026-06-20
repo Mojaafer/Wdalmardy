@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class Order extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     public const STATUSES = ['new', 'preparing', 'shipped', 'delivered', 'cancelled'];
 

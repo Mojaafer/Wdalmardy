@@ -8,7 +8,6 @@ use App\Models\BranchProductStock;
 use App\Models\InventoryAuditItem;
 use App\Models\InventoryAuditSession;
 use App\Models\InventoryAuditTemplate;
-use App\Models\Product;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

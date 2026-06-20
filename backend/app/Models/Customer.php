@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class Customer extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     public const TIERS = [
         ['key' => 'bronze', 'label' => 'برونزي', 'min' => 0, 'color' => '#a16207'],
