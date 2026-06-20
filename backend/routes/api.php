@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AuthController;
+use App\Http\Controllers\Api\Admin\AuditLogAdminController;
 use App\Http\Controllers\Api\Admin\BarcodeAdminController;
+use App\Http\Controllers\Api\Admin\BranchAdminController;
 use App\Http\Controllers\Api\Admin\CategoryAdminController;
 use App\Http\Controllers\Api\Admin\CouponAdminController;
 use App\Http\Controllers\Api\Admin\CustomerAdminController;
@@ -10,6 +12,7 @@ use App\Http\Controllers\Api\Admin\DeliveryZoneAdminController;
 use App\Http\Controllers\Api\Admin\DriverAdminController;
 use App\Http\Controllers\Api\Admin\EmployeeAdminController;
 use App\Http\Controllers\Api\Admin\InventoryAdminController;
+use App\Http\Controllers\Api\Admin\InventoryAuditAdminController;
 use App\Http\Controllers\Api\Admin\InvoiceAdminController;
 use App\Http\Controllers\Api\Admin\LoyaltyAdminController;
 use App\Http\Controllers\Api\Admin\MessageAdminController;
@@ -156,9 +159,14 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::middleware('permission:inventory.view')->group(function () {
         Route::get('/inventory/movements', [InventoryAdminController::class, 'movements']);
         Route::get('/inventory/low-stock', [InventoryAdminController::class, 'lowStock']);
+        Route::get('/inventory/audit-sessions', [InventoryAuditAdminController::class, 'index']);
+        Route::get('/inventory/audit-sessions/{session}', [InventoryAuditAdminController::class, 'show']);
     });
     Route::middleware('permission:inventory.manage')->group(function () {
         Route::post('/inventory/adjust', [InventoryAdminController::class, 'adjust']);
+        Route::post('/inventory/audit-sessions', [InventoryAuditAdminController::class, 'store']);
+        Route::put('/inventory/audit-sessions/{session}/items/{item}', [InventoryAuditAdminController::class, 'updateItem']);
+        Route::post('/inventory/audit-sessions/{session}/close', [InventoryAuditAdminController::class, 'close']);
     });
 
     Route::middleware('permission:delivery.view')->group(function () {
@@ -236,6 +244,23 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::get('/settings', [SettingAdminController::class, 'index']);
         Route::put('/settings', [SettingAdminController::class, 'update']);
         Route::get('/settings/backup', [SettingAdminController::class, 'backup']);
+        Route::get('/settings/backups', [SettingAdminController::class, 'backups']);
+    });
+
+    Route::middleware('permission:branches.view')->group(function () {
+        Route::get('/branches', [BranchAdminController::class, 'index']);
+    });
+    Route::middleware('permission:branches.manage')->group(function () {
+        Route::post('/branches', [BranchAdminController::class, 'store']);
+        Route::put('/branches/{branch}', [BranchAdminController::class, 'update']);
+        Route::delete('/branches/{branch}', [BranchAdminController::class, 'destroy']);
+    });
+
+    Route::middleware('permission:audit_logs.view')->group(function () {
+        Route::get('/audit-log', [AuditLogAdminController::class, 'index']);
+    });
+    Route::middleware('permission:audit_logs.export')->group(function () {
+        Route::get('/audit-log/export', [AuditLogAdminController::class, 'export']);
     });
 
     // POS — cashier app

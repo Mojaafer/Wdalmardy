@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\DeliveryZone;
@@ -111,6 +112,7 @@ class OrderController extends Controller
 
             $order = Order::create([
                 'order_number' => Order::generateOrderNumber(),
+                'branch_id' => Branch::defaultId(),
                 'customer_id' => $customer->id,
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
@@ -154,6 +156,7 @@ class OrderController extends Controller
                         'order',
                         $order->id,
                         'طلب '.$order->order_number,
+                        $order->branch_id,
                     );
                 }
             }

@@ -183,10 +183,11 @@ export async function validateCoupon(
   code: string,
   subtotal: number,
   shipping: number,
+  context: { customer_phone?: string; region?: string; product_ids?: number[] } = {},
 ): Promise<{ data: CouponValidation }> {
   return request('/coupons/validate', {
     method: 'POST',
-    body: JSON.stringify({ code, subtotal, shipping }),
+    body: JSON.stringify({ code, subtotal, shipping, ...context }),
   });
 }
 

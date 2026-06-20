@@ -115,7 +115,11 @@ export default function CheckoutPage() {
     setCouponError(null);
     setCouponLoading(true);
     try {
-      const r = await validateCoupon(couponInput.trim(), subtotal, baseDeliveryFee);
+      const r = await validateCoupon(couponInput.trim(), subtotal, baseDeliveryFee, {
+        customer_phone: phone,
+        region: district || state,
+        product_ids: items.map((item) => item.product_id),
+      });
       setCoupon(r.data);
     } catch (e) {
       setCoupon(null);

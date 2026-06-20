@@ -351,13 +351,25 @@ export type AdminCoupon = {
   used_count: number;
   max_uses_per_customer: number | null;
   applies_to: 'all' | 'new_customers';
+  customer_segment: 'all' | 'first_order' | 'returning' | 'region' | 'seasonal' | 'product' | 'vip';
+  geo_regions: string[];
+  product_ids: number[];
+  seasonal_tag: string | null;
+  vip_only: boolean;
   starts_at: string | null;
   ends_at: string | null;
   is_active: boolean;
   status: 'active' | 'scheduled' | 'expired' | 'paused' | 'exhausted';
   created_at: string;
 };
-export type CouponStats = { total: number; active: number; expired: number; exhausted: number };
+export type CouponStats = {
+  total: number;
+  active: number;
+  expired: number;
+  exhausted: number;
+  targeted?: number;
+  top_coupons?: { code: string; used_count: number; status: AdminCoupon['status'] }[];
+};
 
 export const listCoupons = (params: Record<string, string | number> = {}) => {
   const qs = new URLSearchParams(
@@ -513,6 +525,63 @@ export const listLowStock = (threshold = 10) =>
   request<{ data: LowStockProduct[]; threshold: number }>(`/admin/inventory/low-stock?threshold=${threshold}`);
 export const adjustStock = (body: { product_id: number; type: 'in' | 'out' | 'adjustment'; reason: string; quantity: number; notes?: string }) =>
   request<{ data: StockMovement }>('/admin/inventory/adjust', { method: 'POST', body: JSON.stringify(body) });
+
+export type InventoryAuditItem = {
+  id: number;
+  product_id: number;
+  product: { id: number; name_ar: string; name_en: string | null; barcode: string | null; image: string | null } | null;
+  expected_qty: number;
+  counted_qty: number | null;
+  variance: number;
+  status: 'pending' | 'matched' | 'variance' | string;
+  notes: string | null;
+};
+export type InventoryAuditSession = {
+  id: number;
+  branch_id: number | null;
+  branch: { id: number; name_ar: string } | null;
+  name: string;
+  cadence: 'daily' | 'weekly' | 'monthly';
+  status: 'open' | 'closed';
+  items_count: number;
+  accuracy_rate: number;
+  total_variance: number;
+  started_at: string | null;
+  closed_at: string | null;
+  started_by: { id: number; name: string } | null;
+  closed_by?: { id: number; name: string } | null;
+  items?: InventoryAuditItem[];
+};
+export type InventoryAuditTemplate = {
+  id: number;
+  name: string;
+  cadence: 'daily' | 'weekly' | 'monthly';
+  scope: 'all' | 'low_stock';
+  is_active: boolean;
+};
+export const listInventoryAuditSessions = () =>
+  request<{
+    data: InventoryAuditSession[];
+    templates: InventoryAuditTemplate[];
+    stats: { open: number; closed: number; avg_accuracy: number; variance_items: number };
+  }>('/admin/inventory/audit-sessions');
+export const createInventoryAuditSession = (body: Record<string, unknown>) =>
+  request<{ data: InventoryAuditSession }>('/admin/inventory/audit-sessions', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+export const getInventoryAuditSession = (id: number) =>
+  request<{ data: InventoryAuditSession }>(`/admin/inventory/audit-sessions/${id}`);
+export const updateInventoryAuditItem = (sessionId: number, itemId: number, body: { counted_qty: number; notes?: string }) =>
+  request<{ data: InventoryAuditItem }>(`/admin/inventory/audit-sessions/${sessionId}/items/${itemId}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+export const closeInventoryAuditSession = (sessionId: number, apply_adjustments: boolean) =>
+  request<{ data: InventoryAuditSession }>(`/admin/inventory/audit-sessions/${sessionId}/close`, {
+    method: 'POST',
+    body: JSON.stringify({ apply_adjustments }),
+  });
 
 // Delivery zones
 export type DeliveryZone = {
@@ -753,6 +822,58 @@ export async function downloadBackup(filename: string) {
   a.remove();
   URL.revokeObjectURL(url);
 }
+export type BackupFile = {
+  filename: string;
+  path: string;
+  size: number;
+  created_at: string;
+};
+export const listBackups = () => request<{ data: BackupFile[] }>('/admin/settings/backups');
+export const runBackup = () =>
+  request<{ data: BackupFile }>('/admin/settings/backup?store=1');
+
+// Audit Log
+export type AuditLogItem = {
+  id: number;
+  event: 'created' | 'updated' | 'deleted' | string;
+  entity_type: string;
+  entity_class: string;
+  entity_id: number;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
+  url: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+  user: { id: number; name: string; email: string } | null;
+};
+export type AuditLogStats = { total: number; created: number; updated: number; deleted: number };
+export const listAuditLog = (params: Record<string, string | number> = {}) => {
+  const query = new URLSearchParams(params as Record<string, string>).toString();
+  return request<{
+    data: AuditLogItem[];
+    meta: { total: number; current_page: number; last_page: number; per_page: number };
+    stats: AuditLogStats;
+    entity_types: string[];
+  }>(`/admin/audit-log${query ? `?${query}` : ''}`);
+};
+export async function downloadAuditLog(params: Record<string, string | number>, filename: string) {
+  const token = getToken();
+  const query = new URLSearchParams(params as Record<string, string>).toString();
+  const res = await fetch(`${API_URL}/admin/audit-log/export${query ? `?${query}` : ''}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new AdminApiError('Failed to export audit log', res.status);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 // Reports
 export type ReportRange = '7d' | '30d' | '90d' | 'mtd' | 'ytd';
@@ -904,6 +1025,7 @@ export const adjustCustomerPoints = (
 // ---------- POS ----------
 export type PosSession = {
   id: number;
+  branch_id: number | null;
   register: string;
   status: 'open' | 'closed';
   opening_cash: number;
@@ -921,11 +1043,14 @@ export type PosSession = {
 };
 export type PosProduct = {
   id: number;
+  category_id: number | null;
   slug: string;
   name: { ar: string | null; en: string | null };
   barcode: string | null;
+  image: string | null;
   price: number;
   stock: number;
+  is_featured: boolean;
 };
 export type PosSaleItem = {
   id: number;
@@ -939,6 +1064,7 @@ export type PosSaleItem = {
 export type PosSale = {
   id: number;
   sale_number: string;
+  branch_id: number | null;
   session_id: number;
   session: { id: number; register: string } | null;
   cashier: { id: number; name: string } | null;
@@ -980,6 +1106,7 @@ export const getCurrentPosSession = () =>
   request<{ data: PosSession | null }>('/admin/pos/sessions/current');
 export const openPosSession = (body: {
   opening_cash: number;
+  branch_id?: number;
   register?: string;
   notes?: string;
 }) =>
@@ -995,10 +1122,19 @@ export const closePosSession = (
     method: 'POST',
     body: JSON.stringify(body),
   });
-export const searchPosProducts = (q: string) =>
-  request<{ data: PosProduct[] }>(
-    `/admin/pos/products/search?q=${encodeURIComponent(q)}`,
+export const searchPosProducts = (
+  q: string,
+  params: { category_id?: number | string; featured?: boolean; limit?: number } = {},
+) => {
+  const qs = new URLSearchParams();
+  if (q) qs.set('q', q);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '' && value !== null) qs.set(key, String(value));
+  });
+  return request<{ data: PosProduct[] }>(
+    `/admin/pos/products/search${qs.toString() ? `?${qs.toString()}` : ''}`,
   );
+};
 export const createPosSale = (body: {
   session_id: number;
   items: { product_id: number; quantity: number }[];
@@ -1053,3 +1189,52 @@ export const getPosZReport = (date?: string) =>
   request<{ data: PosZReport }>(
     `/admin/pos/z-report${date ? `?date=${date}` : ''}`,
   );
+
+// Branches
+export type AdminBranch = {
+  id: number;
+  name_ar: string;
+  name_en: string | null;
+  code: string;
+  manager_name: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  status: 'active' | 'paused' | 'closed';
+  is_main: boolean;
+  sort_order: number;
+  orders_count: number;
+  pos_sales_count: number;
+  products_count: number;
+  sales_total: number;
+  stock_units: number;
+  stock_value: number;
+  low_stock_count: number;
+  created_at: string | null;
+};
+export type BranchInventoryRow = {
+  branch_id: number;
+  branch_name: string;
+  products_count: number;
+  stock_units: number;
+  low_stock: number;
+  stock_value: number;
+};
+export type BranchStats = {
+  total_branches: number;
+  active_branches: number;
+  total_sales: number;
+  total_products: number;
+  total_stock_units: number;
+  stock_value: number;
+};
+export const listBranches = () =>
+  request<{ data: AdminBranch[]; stats: BranchStats; inventory: BranchInventoryRow[] }>(
+    '/admin/branches',
+  );
+export const createBranch = (body: Record<string, unknown>) =>
+  request<{ data: AdminBranch }>('/admin/branches', { method: 'POST', body: JSON.stringify(body) });
+export const updateBranch = (id: number, body: Record<string, unknown>) =>
+  request<{ data: AdminBranch }>(`/admin/branches/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+export const deleteBranch = (id: number) =>
+  request<{ data: { ok: boolean } }>(`/admin/branches/${id}`, { method: 'DELETE' });

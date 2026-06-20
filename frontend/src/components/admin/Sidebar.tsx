@@ -24,6 +24,7 @@ import {
   Barcode,
   Award,
   ScanLine,
+  ClipboardList,
   type LucideIcon,
 } from 'lucide-react';
 import type { AdminUser } from '@/lib/admin/api';
@@ -49,8 +50,10 @@ export default function Sidebar({ user }: { user: AdminUser }) {
       { href: '/admin/offers', label: 'العروض والخصومات', icon: Megaphone, permission: 'offers.view' },
       { href: '/admin/coupons', label: 'كوبونات الخصم', icon: Ticket, permission: 'coupons.view' },
       { href: '/admin/suppliers', label: 'الموردين', icon: Building2, permission: 'suppliers.view' },
+      { href: '/admin/branches', label: 'إدارة الفروع', icon: Building2, permission: 'branches.view' },
       { href: '/admin/employees', label: 'الموظفين', icon: UserCog, permission: 'employees.view' },
       { href: '/admin/inventory', label: 'إدارة المخزون', icon: Boxes, permission: 'inventory.view' },
+      { href: '/admin/inventory/audit-sessions', label: 'جرد سريع', icon: ScanLine, permission: 'inventory.view' },
       { href: '/admin/barcodes', label: 'الباركود', icon: Barcode, permission: 'products.view' },
       { href: '/admin/loyalty', label: 'برنامج الولاء', icon: Award, permission: 'customers.view' },
       { href: '/admin/delivery', label: 'إدارة التوصيل', icon: Truck, permission: 'delivery.view' },
@@ -59,6 +62,7 @@ export default function Sidebar({ user }: { user: AdminUser }) {
       { href: '/admin/messages', label: 'الرسائل والدعم', icon: Inbox, permission: 'messages.view' },
       { href: '/admin/pages', label: 'الصفحات', icon: FileText, permission: 'pages.view' },
       { href: '/admin/reports', label: 'التقارير', icon: BarChart3, permission: 'reports.view' },
+      { href: '/admin/audit-log', label: 'سجل التدقيق', icon: ClipboardList, permission: 'audit_logs.view' },
       { href: '/admin/permissions', label: 'صلاحيات المدير', icon: ShieldCheck, permission: 'employees.manage' },
       { href: '/admin/settings', label: 'إعدادات النظام', icon: Settings, permission: 'settings.manage' },
     ],

@@ -45,4 +45,13 @@ body {
   .input {
     @apply w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green;
   }
+  .pos-top-button {
+    @apply h-10 px-3 rounded-lg hover:bg-white/10 inline-flex items-center gap-2 text-xs font-bold;
+  }
+  .pos-side-action {
+    @apply min-h-20 rounded-lg bg-[#0E5C3A] text-white font-bold inline-flex flex-col items-center justify-center gap-2 text-sm;
+  }
+  .qty-button {
+    @apply w-7 h-7 rounded border border-slate-200 bg-white hover:bg-slate-50 grid place-items-center;
+  }
 }

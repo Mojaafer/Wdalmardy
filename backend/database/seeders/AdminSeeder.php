@@ -31,9 +31,23 @@ class AdminSeeder extends Seeder
             'invoices.view', 'invoices.manage',
             'reports.view',
             'settings.manage',
+            'branches.view', 'branches.manage',
             'users.manage',
             'pos.operate', 'pos.manage',
+            'audit_logs.view', 'audit_logs.export',
         ];
+
+        $granularModules = [
+            'products', 'categories', 'orders', 'customers', 'offers', 'coupons',
+            'suppliers', 'employees', 'inventory', 'delivery', 'pages', 'messages',
+            'invoices', 'reports', 'settings', 'branches', 'pos', 'audit_logs',
+        ];
+        foreach ($granularModules as $module) {
+            foreach (['add', 'edit', 'delete', 'export', 'print'] as $action) {
+                $permissions[] = $module.'.'.$action;
+            }
+        }
+        $permissions = array_values(array_unique($permissions));
 
         foreach ($permissions as $perm) {
             Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
