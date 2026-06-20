@@ -27,7 +27,7 @@ export default function SalesChart({ data }: { data: { date: string; total: numb
             <YAxis tick={{ fill: '#64748b', fontSize: 12 }} orientation="right" />
             <Tooltip
               contentStyle={{ direction: 'rtl', borderRadius: 8, border: '1px solid #e2e8f0' }}
-              formatter={(v) => [`${Number(v ?? 0).toLocaleString('ar-SD')} ج.س`, 'المبيعات']}
+              formatter={(v: unknown) => [`${Number(v ?? 0).toLocaleString('ar-SD')} ج.س`, 'المبيعات']}
             />
             <Area
               type="monotone"

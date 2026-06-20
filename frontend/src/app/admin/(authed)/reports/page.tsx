@@ -192,11 +192,11 @@ export default function ReportsPage() {
                     <YAxis
                       tick={{ fill: '#64748b', fontSize: 12 }}
                       orientation="right"
-                      tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`}
+                      tickFormatter={(v: unknown) => `${Math.round(Number(v) / 1000)}k`}
                     />
                     <Tooltip
                       contentStyle={{ direction: 'rtl', borderRadius: 8, border: '1px solid #e2e8f0' }}
-                      formatter={(v) => [formatCurrency(Number(v ?? 0)), 'المبيعات']}
+                      formatter={(v: unknown) => [formatCurrency(Number(v ?? 0)), 'المبيعات']}
                     />
                     <Area
                       type="monotone"
@@ -232,7 +232,7 @@ export default function ReportsPage() {
                       />
                       <Tooltip
                         contentStyle={{ direction: 'rtl', borderRadius: 8, border: '1px solid #e2e8f0' }}
-                        formatter={(v) => formatCurrency(Number(v ?? 0))}
+                        formatter={(v: unknown) => formatCurrency(Number(v ?? 0))}
                       />
                       <Bar dataKey="revenue" fill="#0E5C3A" radius={[0, 6, 6, 0]} />
                     </BarChart>
@@ -263,7 +263,7 @@ export default function ReportsPage() {
                       </Pie>
                       <Tooltip
                         contentStyle={{ direction: 'rtl', borderRadius: 8, border: '1px solid #e2e8f0' }}
-                        formatter={(v) => formatCurrency(Number(v ?? 0))}
+                        formatter={(v: unknown) => formatCurrency(Number(v ?? 0))}
                       />
                       <Legend wrapperStyle={{ direction: 'rtl' }} />
                     </PieChart>
