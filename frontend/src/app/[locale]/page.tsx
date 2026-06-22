@@ -17,10 +17,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     getCategories().catch(() => ({ data: [] })),
     getProducts({ featured: 1, per_page: 4 }).catch(() => ({ data: [] })),
     getProducts({ per_page: 8, sort: 'newest' }).catch(() => ({ data: [] })),
-    getPublicSettings().catch(() => ({ data: {} })),
+    getPublicSettings().catch(() => ({ data: {} }) as { data: Record<string, unknown> }),
   ]);
 
-  const heroImage = settings.data?.hero_image as string | undefined;
+  const heroImage = (settings.data as Record<string, unknown> | undefined)?.hero_image as string | undefined;
   const heroImageUrl = heroImage
     ? heroImage.startsWith('http')
       ? heroImage
