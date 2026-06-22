@@ -42,7 +42,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
            />
          )}
          <div className="relative z-10 py-16 md:py-24 w-full px-4 md:px-8 lg:px-16">
-            <div className="max-w-lg mr-auto ml-24 md:ml-48 lg:ml-60">
+            <div className="max-w-lg mr-auto ml-12 md:ml-32 lg:ml-40">
              <h1 className="text-2xl xs:text-3xl md:text-5xl font-extrabold leading-tight text-left">
                <span className="text-brand-green">{t('home.hero_title_1')}</span>
                <br />
