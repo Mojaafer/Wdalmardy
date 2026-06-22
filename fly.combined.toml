@@ -18,6 +18,7 @@ primary_region = "ams"
 
 [env]
   APP_URL = "https://wdalmardy-app.fly.dev"
+  FRONTEND_URL = "https://frontend-cyan-eta-39.vercel.app"
 
 [[vm]]
   memory = "1gb"

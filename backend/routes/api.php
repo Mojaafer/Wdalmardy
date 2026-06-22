@@ -84,7 +84,7 @@ Route::prefix('auth')->controller(AuthController::class)->group(function () {
 Route::post('/admin/login', [AdminAuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
-    Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/me', [AdminAuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('/dashboard', DashboardController::class);
