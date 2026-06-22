@@ -33,28 +33,37 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       <OffersBanner locale={locale} />
 
        {/* Hero */}
-       <section className="relative overflow-hidden min-h-[300px] xs:min-h-[400px] md:min-h-[500px] flex items-center bg-brand-cream-100">
-          {heroImageUrl && (
-           <img
-             src={heroImageUrl}
-             alt=""
-             className="absolute inset-0 w-full h-full object-contain"
-           />
+       <section className="relative overflow-hidden min-h-[300px] xs:min-h-[400px] md:min-h-[500px] flex items-center bg-brand-green">
+          {heroImageUrl ? (
+           <>
+            <img
+              src={heroImageUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent" />
+           </>
+         ) : (
+           <div className="absolute inset-0 bg-gradient-to-br from-brand-green via-brand-green to-brand-green-700" />
          )}
-         <div className="relative z-10 py-16 md:py-24 w-full px-4 md:px-8 lg:px-16">
+         <div className="absolute -top-20 ltr:-right-20 rtl:-left-20 w-80 h-80 rounded-full bg-brand-orange/10 blur-3xl" />
+         <div className="absolute -bottom-16 ltr:-left-16 rtl:-right-16 w-60 h-60 rounded-full bg-brand-cream/10 blur-3xl" />
+         <div className="relative z-10 py-16 md:py-24 w-full">
+           <div className="container">
             <div className="max-w-lg mr-auto ml-12 md:ml-32 lg:ml-40">
              <h1 className="text-2xl xs:text-3xl md:text-5xl font-extrabold leading-tight text-left">
-               <span className="text-brand-green">{t('home.hero_title_1')}</span>
+               <span className="text-white">{t('home.hero_title_1')}</span>
                <br />
-               <span className={heroImageUrl ? 'text-brand-orange' : 'text-brand-orange'}>{t('home.hero_title_2')}</span>
+               <span className="text-brand-orange">{t('home.hero_title_2')}</span>
              </h1>
-             <p className="mt-4 text-base text-brand-green text-left">{t('home.hero_subtitle')}</p>
+             <p className="mt-4 text-base text-white/80 text-left">{t('home.hero_subtitle')}</p>
              <div className="mt-6 text-left">
-               <Link href="/store" className="btn-orange inline-flex">
+               <Link href="/store" className="btn-orange inline-flex shadow-lg shadow-brand-orange/30">
                <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
                {t('home.hero_cta')}
              </Link>
            </div>
+         </div>
          </div>
          </div>
        </section>
