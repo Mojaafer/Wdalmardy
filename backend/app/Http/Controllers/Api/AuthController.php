@@ -216,4 +216,27 @@ class AuthController extends Controller
 
         return response()->json(['data' => $order]);
     }
+
+    /**
+     * Cancel an order — only allowed when status is 'new'.
+     */
+    public function cancelOrder(Request $request, int $orderId)
+    {
+        /** @var Customer $customer */
+        $customer = $request->user();
+
+        $order = Order::where('customer_id', $customer->id)->find($orderId);
+
+        if (! $order) {
+            return response()->json(['message' => 'الطلب غير موجود.'], 404);
+        }
+
+        if ($order->status !== 'new') {
+            return response()->json(['message' => 'لا يمكن إلغاء الطلب في هذه الحالة.'], 422);
+        }
+
+        $order->updateQuietly(['status' => 'cancelled']);
+
+        return response()->json(['data' => ['message' => 'تم إلغاء الطلب بنجاح.']]);
+    }
 }

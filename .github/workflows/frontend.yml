@@ -2,12 +2,12 @@ name: Frontend (Next.js)
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, phase-b7-onwards]
     paths:
       - "frontend/**"
       - ".github/workflows/frontend.yml"
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, phase-b7-onwards]
     paths:
       - "frontend/**"
       - ".github/workflows/frontend.yml"

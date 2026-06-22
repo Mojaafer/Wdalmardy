@@ -1448,3 +1448,64 @@ export const updateBranch = (id: number, body: Record<string, unknown>) =>
   request<{ data: AdminBranch }>(`/admin/branches/${id}`, { method: 'PUT', body: JSON.stringify(body) });
 export const deleteBranch = (id: number) =>
   request<{ data: { ok: boolean } }>(`/admin/branches/${id}`, { method: 'DELETE' });
+
+// ---------------------------------------------------------------------------
+// Stock transfers (inter-branch)
+// ---------------------------------------------------------------------------
+export type StockTransferStatus = 'pending' | 'in_transit' | 'received' | 'cancelled';
+
+export type StockTransferItem = {
+  id: number;
+  product_id: number;
+  quantity: number;
+  product: { id: number; slug: string; name_ar: string; name_en: string } | null;
+};
+
+export type StockTransfer = {
+  id: number;
+  from_branch_id: number;
+  to_branch_id: number;
+  from_branch: { id: number; name_ar: string } | null;
+  to_branch: { id: number; name_ar: string } | null;
+  status: StockTransferStatus;
+  items_count: number;
+  notes: string | null;
+  created_by: { id: number; name: string } | null;
+  dispatched_at: string | null;
+  received_at: string | null;
+  created_at: string | null;
+  items?: StockTransferItem[];
+};
+
+export const listStockTransfers = (params: Record<string, string | number> = {}) => {
+  const qs = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)])).toString();
+  return request<{ data: StockTransfer[]; meta: { total: number; per_page: number; current_page: number; last_page: number } }>(
+    `/admin/stock-transfers${qs ? `?${qs}` : ''}`,
+  );
+};
+
+export const getStockTransfer = (id: number) =>
+  request<{ data: StockTransfer }>(`/admin/stock-transfers/${id}`);
+
+export const createStockTransfer = (body: {
+  from_branch_id: number;
+  to_branch_id: number;
+  items: { product_id: number; quantity: number }[];
+  notes?: string;
+}) => request<{ data: StockTransfer }>('/admin/stock-transfers', { method: 'POST', body: JSON.stringify(body) });
+
+export const dispatchStockTransfer = (id: number) =>
+  request<{ data: StockTransfer }>(`/admin/stock-transfers/${id}/dispatch`, { method: 'POST' });
+
+export const receiveStockTransfer = (id: number) =>
+  request<{ data: StockTransfer }>(`/admin/stock-transfers/${id}/receive`, { method: 'POST' });
+
+export const cancelStockTransfer = (id: number) =>
+  request<{ data: StockTransfer }>(`/admin/stock-transfers/${id}/cancel`, { method: 'POST' });
+
+// Order branch reassignment
+export const assignOrderBranch = (orderId: number, branchId: number) =>
+  request<{ data: AdminOrder }>(`/admin/orders/${orderId}/assign-branch`, {
+    method: 'POST',
+    body: JSON.stringify({ branch_id: branchId }),
+  });

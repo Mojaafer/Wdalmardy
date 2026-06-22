@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/customer/useAuth';
 import {
-  updateProfile, getOrders, updateAddresses,
+  updateProfile, getOrders, updateAddresses, cancelOrder,
   type CustomerData, type Address, type CustomerOrder,
 } from '@/lib/customer/auth';
 import { getLoyaltyBalance, type LoyaltyBalance } from '@/lib/api';
@@ -242,6 +242,7 @@ function OrdersTab({ locale }: { locale: string }) {
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState<number | null>(null);
 
   async function load(p: number) {
     setLoading(true);
@@ -252,6 +253,16 @@ function OrdersTab({ locale }: { locale: string }) {
       setPage(res.meta.current_page);
     } catch { }
     finally { setLoading(false); }
+  }
+
+  async function handleCancel(orderId: number) {
+    if (!confirm(isAr ? 'هل أنت متأكد من إلغاء هذا الطلب؟' : 'Are you sure you want to cancel this order?')) return;
+    setCancelling(orderId);
+    try {
+      await cancelOrder(orderId);
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled' } : o)));
+    } catch { }
+    finally { setCancelling(null); }
   }
 
   useEffect(() => { load(page); }, [page]);
@@ -315,13 +326,26 @@ function OrdersTab({ locale }: { locale: string }) {
               <span>{isAr ? 'الإجمالي' : 'Total'}</span>
               <span>{formatPrice(order.total, locale)} {isAr ? 'ج.س' : 'SDG'}</span>
             </div>
-            <Link
-              href={`/order-tracking/${order.id}`}
-              className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-brand-green hover:text-brand-green-600"
-            >
-              <Eye className="h-3.5 w-3.5" />
-              {isAr ? 'تتبع الطلب' : 'Track order'}
-            </Link>
+            <div className="mt-3 flex items-center gap-3">
+              <Link
+                href={`/order-tracking/${order.id}`}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-green hover:text-brand-green-600"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                {isAr ? 'تتبع الطلب' : 'Track order'}
+              </Link>
+              {order.status === 'new' && (
+                <button
+                  onClick={() => handleCancel(order.id)}
+                  disabled={cancelling === order.id}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 disabled:opacity-50"
+                >
+                  {cancelling === order.id
+                    ? (isAr ? 'جاري الإلغاء...' : 'Cancelling...')
+                    : (isAr ? 'إلغاء الطلب' : 'Cancel order')}
+                </button>
+              )}
+            </div>
           </div>
         );
       })}

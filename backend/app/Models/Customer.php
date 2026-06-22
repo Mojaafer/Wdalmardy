@@ -57,6 +57,11 @@ class Customer extends Model
         return $this->hasMany(Order::class);
     }
 
+    public function wishlist()
+    {
+        return $this->belongsToMany(Product::class, 'wishlist');
+    }
+
     public function pointMovements(): HasMany
     {
         return $this->hasMany(CustomerPointMovement::class);

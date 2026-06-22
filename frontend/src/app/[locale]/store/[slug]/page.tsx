@@ -4,6 +4,8 @@ import { ProductImage } from '@/components/ProductImage';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n/routing';
 import { ProductActions } from './ProductActions';
+import { ProductReviews } from '@/components/ProductReviews';
+import { WishlistButton } from '@/components/WishlistButton';
 import { Star, Truck, Award, RotateCcw } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
@@ -96,6 +98,10 @@ export default async function ProductPage({
             )}
           </div>
 
+          <div className="mt-4">
+            <WishlistButton productId={product.id} />
+          </div>
+
           <ProductActions product={product} />
 
           <div className="mt-6 grid grid-cols-3 gap-3 text-xs">
@@ -117,6 +123,8 @@ export default async function ProductPage({
           </div>
         </div>
       </div>
+
+      <ProductReviews productId={product.id} />
 
       {related.length > 0 && (
         <section className="mt-12">

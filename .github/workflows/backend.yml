@@ -2,13 +2,13 @@ name: Backend (Laravel)
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, phase-b7-onwards]
     paths:
       - "backend/**"
       - "docker-compose.yml"
       - ".github/workflows/backend.yml"
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, phase-b7-onwards]
     paths:
       - "backend/**"
       - "docker-compose.yml"

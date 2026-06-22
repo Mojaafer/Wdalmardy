@@ -29,6 +29,7 @@ import {
   BookOpen,
   ScrollText,
   ShoppingBag,
+  ArrowRightLeft,
   type LucideIcon,
 } from 'lucide-react';
 import type { AdminUser } from '@/lib/admin/api';

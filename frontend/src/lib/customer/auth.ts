@@ -157,3 +157,19 @@ export type CustomerOrderDetail = CustomerOrder & {
 export async function getOrder(orderId: number) {
   return request<{ data: CustomerOrderDetail }>(`/auth/orders/${orderId}`);
 }
+
+export async function cancelOrder(orderId: number) {
+  return request<{ data: { message: string } }>(`/auth/orders/${orderId}/cancel`, {
+    method: 'POST',
+  });
+}
+
+export async function getWishlist() {
+  return request<{ data: import('@/lib/api').Product[] }>('/auth/wishlist');
+}
+
+export async function toggleWishlist(productId: number) {
+  return request<{ data: { added: boolean } }>(`/auth/wishlist/${productId}`, {
+    method: 'POST',
+  });
+}

@@ -6,6 +6,7 @@ import type { AdminUser } from '@/lib/admin/api';
 import { logout, clearSession } from '@/lib/admin/api';
 import { ROLE_LABELS } from '@/lib/admin/format';
 import NotificationBell from './NotificationBell';
+import BranchSwitcher from './BranchSwitcher';
 
 export default function Topbar({
   user,
@@ -37,6 +38,8 @@ export default function Topbar({
       >
         <Menu className="w-5 h-5" />
       </button>
+
+      <BranchSwitcher />
 
       <div className="flex-1" />
 

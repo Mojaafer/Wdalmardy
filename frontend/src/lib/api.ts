@@ -105,6 +105,30 @@ export async function getProduct(
   return { data: res.data, related };
 }
 
+export type Review = {
+  id: number;
+  rating: number;
+  comment: string | null;
+  customer_name: string;
+  created_at: string;
+};
+
+export async function getProductReviews(productId: number): Promise<{ data: Review[] }> {
+  return request(`/products/${productId}/reviews`);
+}
+
+export async function submitReview(
+  productId: number,
+  body: { rating: number; comment?: string },
+  token: string
+) {
+  return request<{ data: Review }>(`/products/${productId}/reviews`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export type CreateOrderInput = {
   customer_name: string;
   customer_phone: string;

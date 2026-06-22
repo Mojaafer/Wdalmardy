@@ -41,7 +41,9 @@ use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PageController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\WishlistController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -68,6 +70,7 @@ Route::middleware('throttle:30,1')->group(function () {
     Route::post('/messages', [MessageController::class, 'store']);
 });
 Route::get('/settings', [SettingController::class, 'public_index']);
+Route::get('/products/{productId}/reviews', [ReviewController::class, 'index'])->whereNumber('productId');
 
 // Customer auth — public OTP endpoints (throttled tightly to deter abuse)
 Route::middleware('throttle:'.(int) env('RATE_LIMIT_OTP', 5).',1')->group(function () {
@@ -85,6 +88,10 @@ Route::prefix('auth')->controller(AuthController::class)->middleware(['auth:sanc
     Route::put('/addresses', 'updateAddresses');
     Route::get('/orders', 'orders');
     Route::get('/orders/{orderId}', 'showOrder')->whereNumber('orderId');
+    Route::post('/orders/{orderId}/cancel', 'cancelOrder')->whereNumber('orderId');
+    Route::post('/products/{productId}/reviews', [ReviewController::class, 'store'])->whereNumber('productId');
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::post('/wishlist/{productId}', [WishlistController::class, 'toggle'])->whereNumber('productId');
 });
 
 // Admin auth — throttled aggressively to mitigate brute force
