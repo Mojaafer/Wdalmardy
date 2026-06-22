@@ -110,6 +110,8 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::put('/categories/{category}', [CategoryAdminController::class, 'update']);
         Route::delete('/categories/{category}', [CategoryAdminController::class, 'destroy']);
         Route::post('/categories/reorder', [CategoryAdminController::class, 'reorder']);
+        Route::post('/categories/{category}/image', [CategoryAdminController::class, 'uploadImage']);
+        Route::delete('/categories/{category}/image', [CategoryAdminController::class, 'deleteImage']);
     });
 
     Route::middleware('permission:orders.view')->group(function () {
@@ -164,6 +166,8 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::put('/suppliers/{supplier}', [SupplierAdminController::class, 'update']);
         Route::post('/suppliers/{supplier}/toggle', [SupplierAdminController::class, 'toggleStatus']);
         Route::delete('/suppliers/{supplier}', [SupplierAdminController::class, 'destroy']);
+        Route::post('/suppliers/{supplier}/logo', [SupplierAdminController::class, 'uploadLogo']);
+        Route::delete('/suppliers/{supplier}/logo', [SupplierAdminController::class, 'deleteLogo']);
     });
 
     Route::middleware('permission:employees.view')->group(function () {

@@ -1,19 +1,21 @@
 'use client';
 
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useRef, useState, FormEvent } from 'react';
 import {
   listCategories,
   createCategory,
   updateCategory,
   deleteCategory,
   reorderCategories,
+  uploadCategoryImage,
+  deleteCategoryImage,
   type AdminCategory,
   AdminApiError,
 } from '@/lib/admin/api';
 import { fmtNumber } from '@/lib/admin/format';
 import PageHeader from '@/components/admin/PageHeader';
 import Drawer from '@/components/admin/Drawer';
-import { Pencil, Trash2, GripVertical, Tag } from 'lucide-react';
+import { Pencil, Trash2, GripVertical, Tag, Trash2 as TrashIcon, ImageIcon } from 'lucide-react';
 
 export default function AdminCategoriesPage() {
   const [items, setItems] = useState<AdminCategory[]>([]);
@@ -157,11 +159,43 @@ function CategoryForm({
   const [form, setForm] = useState({
     name_ar: editing?.name.ar ?? '',
     name_en: editing?.name.en ?? '',
-    image: editing?.image ?? '',
     is_active: editing?.is_active ?? true,
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [image, setImage] = useState<string | null>(editing?.image ?? null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api').replace(/\/api\/?$/, '');
+  const imageUrl = image
+    ? image.startsWith('http') ? image : `${API_BASE}/storage/${image}`
+    : null;
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !editing) return;
+    setUploading(true);
+    try {
+      const res = await uploadCategoryImage(editing.id, file);
+      setImage(res.data.image);
+    } catch {
+      setError('فشل رفع الصورة');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRemoveImage() {
+    if (!editing) return;
+    setUploading(true);
+    try {
+      await deleteCategoryImage(editing.id);
+      setImage(null);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -206,15 +240,42 @@ function CategoryForm({
         </label>
       </div>
 
-      <label className="block">
-        <span className="text-sm font-medium text-slate-700 block mb-1">رابط الصورة (اختياري)</span>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">صورة القسم (اختياري)</label>
+        {imageUrl ? (
+          <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+            <img src={imageUrl} alt="" className="w-full h-40 object-cover" />
+            <button
+              type="button"
+              onClick={handleRemoveImage}
+              disabled={uploading}
+              className="absolute top-2 left-2 bg-rose-600 text-white p-2 rounded-lg hover:bg-rose-700 disabled:opacity-50"
+            >
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div
+            onClick={() => inputRef.current?.click()}
+            className="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center cursor-pointer hover:border-[#0E5C3A] transition"
+          >
+            <ImageIcon className="w-8 h-8 mx-auto text-slate-300 mb-1" />
+            <div className="text-sm text-slate-500">انقر لرفع الصورة</div>
+            <div className="text-xs text-slate-400 mt-1">JPEG, PNG, WebP — حد أقصى 2MB</div>
+          </div>
+        )}
+        {!editing && (
+          <p className="text-xs text-amber-600 mt-1">احفظ القسم أولاً ثم يمكنك رفع صورة</p>
+        )}
         <input
-          value={form.image ?? ''}
-          onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
-          dir="ltr"
-          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFile}
         />
-      </label>
+        {uploading && <div className="text-xs text-slate-500 mt-1">جاري الرفع...</div>}
+      </div>
 
       <label className="inline-flex items-center gap-2">
         <input

@@ -11,6 +11,13 @@ class Category extends Model
 {
     use Auditable, HasFactory;
 
+    public function imageUrl(): ?string
+    {
+        if (!$this->image) return null;
+        if (str_starts_with($this->image, 'http')) return $this->image;
+        return config('app.url') . '/storage/' . $this->image;
+    }
+
     protected $fillable = [
         'slug',
         'name_ar',

@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useRef, useState, FormEvent } from 'react';
 import {
   listSuppliers,
   createSupplier,
   updateSupplier,
   toggleSupplier,
   deleteSupplier,
+  uploadSupplierLogo,
+  deleteSupplierLogo,
   type AdminSupplier,
   type SupplierStats,
   AdminApiError,
@@ -25,6 +27,8 @@ import {
   Search,
   Power,
   Star,
+  Trash2 as TrashIcon,
+  ImageIcon,
 } from 'lucide-react';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -136,9 +140,13 @@ export default function AdminSuppliersPage() {
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-[#FBEFE2] text-[#0E5C3A] grid place-items-center font-bold">
-                            {s.name.slice(0, 1)}
-                          </div>
+                          {s.logo ? (
+                            <img src={s.logo} alt="" className="w-9 h-9 rounded-lg object-cover" />
+                          ) : (
+                            <div className="w-9 h-9 rounded-lg bg-[#FBEFE2] text-[#0E5C3A] grid place-items-center font-bold">
+                              {s.name.slice(0, 1)}
+                            </div>
+                          )}
                           <div>
                             <div className="font-bold">{s.name}</div>
                             {s.business_type && (
@@ -322,7 +330,40 @@ function SupplierForm({
     notes: editing?.notes ?? '',
   });
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [logo, setLogo] = useState<string | null>(editing?.logo ?? null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api').replace(/\/api\/?$/, '');
+  const logoUrl = logo
+    ? logo.startsWith('http') ? logo : `${API_BASE}/storage/${logo}`
+    : null;
+
+  async function handleLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !editing) return;
+    setUploading(true);
+    try {
+      const res = await uploadSupplierLogo(editing.id, file);
+      setLogo(res.data.logo);
+    } catch {
+      setErr('فشل رفع الشعار');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRemoveLogo() {
+    if (!editing) return;
+    setUploading(true);
+    try {
+      await deleteSupplierLogo(editing.id);
+      setLogo(null);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -442,6 +483,36 @@ function SupplierForm({
             className="w-full border border-slate-200 rounded-lg px-3 py-2 mt-1"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="text-xs font-bold text-slate-700">الشعار</label>
+        {logoUrl ? (
+          <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50 mt-1">
+            <img src={logoUrl} alt="" className="w-full h-32 object-contain" />
+            <button
+              type="button"
+              onClick={handleRemoveLogo}
+              disabled={uploading}
+              className="absolute top-2 left-2 bg-rose-600 text-white p-1.5 rounded-lg hover:bg-rose-700 disabled:opacity-50"
+            >
+              <TrashIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div
+            onClick={() => logoInputRef.current?.click()}
+            className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center cursor-pointer hover:border-[#0E5C3A] transition mt-1"
+          >
+            <ImageIcon className="w-6 h-6 mx-auto text-slate-300 mb-1" />
+            <div className="text-xs text-slate-500">انقر لرفع الشعار</div>
+          </div>
+        )}
+        {!editing && (
+          <p className="text-xs text-amber-600 mt-1">احفظ المورد أولاً ثم يمكنك رفع الشعار</p>
+        )}
+        <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleLogoFile} />
+        {uploading && <div className="text-xs text-slate-500 mt-1">جاري الرفع...</div>}
       </div>
 
       <div>

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EmployeeActivity;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class SupplierAdminController extends Controller
 {
@@ -112,6 +113,36 @@ class SupplierAdminController extends Controller
         return response()->json(['data' => $this->serialize($supplier)]);
     }
 
+    public function uploadLogo(Request $request, Supplier $supplier)
+    {
+        $request->validate([
+            'logo' => 'required|image|mimes:jpeg,png,webp|max:2048',
+        ]);
+
+        if ($supplier->logo && !str_starts_with($supplier->logo, 'http')) {
+            Storage::disk('public')->delete($supplier->logo);
+        }
+
+        $file = $request->file('logo');
+        $filename = 'supplier_'.$supplier->id.'_'.time().'.'.$file->extension();
+        $file->storeAs('public/suppliers', $filename);
+
+        $supplier->update(['logo' => 'suppliers/'.$filename]);
+
+        return response()->json(['data' => $this->serialize($supplier->fresh())]);
+    }
+
+    public function deleteLogo(Request $request, Supplier $supplier)
+    {
+        if ($supplier->logo && !str_starts_with($supplier->logo, 'http')) {
+            Storage::disk('public')->delete($supplier->logo);
+        }
+
+        $supplier->update(['logo' => null]);
+
+        return response()->json(['data' => $this->serialize($supplier->fresh())]);
+    }
+
     private function validatedData(Request $request): array
     {
         return $request->validate([
@@ -141,7 +172,7 @@ class SupplierAdminController extends Controller
             'phone' => $s->phone,
             'address' => $s->address,
             'tax_number' => $s->tax_number,
-            'logo' => $s->logo,
+            'logo' => $s->logoUrl(),
             'registered_at' => $s->registered_at?->toDateString(),
             'status' => $s->status,
             'performance_rating' => (float) $s->performance_rating,

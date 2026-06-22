@@ -9,6 +9,13 @@ class Supplier extends Model
 {
     use Auditable;
 
+    public function logoUrl(): ?string
+    {
+        if (!$this->logo) return null;
+        if (str_starts_with($this->logo, 'http')) return $this->logo;
+        return config('app.url') . '/storage/' . $this->logo;
+    }
+
     protected $fillable = [
         'name',
         'contact_person',

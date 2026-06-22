@@ -1126,6 +1126,28 @@ export const deletePurchaseOrder = (id: number) =>
   request<{ data: { deleted: boolean } }>(`/admin/purchase-orders/${id}`, { method: 'DELETE' });
 
 // Hero Image
+export const uploadCategoryImage = (id: number, file: File) => {
+  const fd = new FormData();
+  fd.append('image', file);
+  return request<{ data: AdminCategory }>(`/admin/categories/${id}/image`, {
+    method: 'POST',
+    body: fd,
+  });
+};
+export const deleteCategoryImage = (id: number) =>
+  request<{ data: AdminCategory }>(`/admin/categories/${id}/image`, { method: 'DELETE' });
+
+export const uploadSupplierLogo = (id: number, file: File) => {
+  const fd = new FormData();
+  fd.append('logo', file);
+  return request<{ data: AdminSupplier }>(`/admin/suppliers/${id}/logo`, {
+    method: 'POST',
+    body: fd,
+  });
+};
+export const deleteSupplierLogo = (id: number) =>
+  request<{ data: AdminSupplier }>(`/admin/suppliers/${id}/logo`, { method: 'DELETE' });
+
 export const uploadHeroImage = (file: File) => {
   const fd = new FormData();
   fd.append('image', file);

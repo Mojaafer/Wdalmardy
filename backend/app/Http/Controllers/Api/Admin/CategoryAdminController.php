@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CategoryAdminController extends Controller
@@ -56,6 +57,36 @@ class CategoryAdminController extends Controller
         $category->delete();
 
         return response()->json(['data' => ['ok' => true]]);
+    }
+
+    public function uploadImage(Request $request, Category $category)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,webp|max:2048',
+        ]);
+
+        if ($category->image && !str_starts_with($category->image, 'http')) {
+            Storage::disk('public')->delete($category->image);
+        }
+
+        $file = $request->file('image');
+        $filename = 'cat_'.$category->id.'_'.time().'.'.$file->extension();
+        $file->storeAs('public/categories', $filename);
+
+        $category->update(['image' => 'categories/'.$filename]);
+
+        return response()->json(['data' => new CategoryResource($category->fresh())]);
+    }
+
+    public function deleteImage(Category $category)
+    {
+        if ($category->image && !str_starts_with($category->image, 'http')) {
+            Storage::disk('public')->delete($category->image);
+        }
+
+        $category->update(['image' => null]);
+
+        return response()->json(['data' => new CategoryResource($category->fresh())]);
     }
 
     public function reorder(Request $request)
