@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Settings, Save, Download, Building2, CreditCard, Truck, Bell, Cog, DatabaseBackup, Play, Upload, Trash2, ImageIcon } from 'lucide-react';
+import { Settings, Save, Download, Building2, CreditCard, Truck, Bell, Cog, DatabaseBackup, Play, Trash2, ImageIcon } from 'lucide-react';
 import {
   getSettings,
   updateSettings,
