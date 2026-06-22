@@ -33,40 +33,36 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       <OffersBanner locale={locale} />
 
        {/* Hero */}
-       <section className="relative overflow-hidden min-h-[300px] xs:min-h-[400px] md:min-h-[500px] flex items-center bg-brand-green">
+       <section className="flex flex-col md:flex-row min-h-[300px] xs:min-h-[400px] md:min-h-[500px] bg-brand-green">
+          {/* Text: left side */}
+          <div className="w-full md:w-1/2 flex items-center py-16 md:py-24 z-10">
+            <div className="container">
+             <div className="max-w-lg mr-auto ml-12 md:ml-24">
+              <h1 className="text-2xl xs:text-3xl md:text-5xl font-extrabold leading-tight text-left">
+                <span className="text-white">{t('home.hero_title_1')}</span>
+                <br />
+                <span className="text-brand-orange">{t('home.hero_title_2')}</span>
+              </h1>
+              <p className="mt-4 text-base text-white/80 text-left">{t('home.hero_subtitle')}</p>
+              <div className="mt-6 text-left">
+                <Link href="/store" className="btn-orange inline-flex shadow-lg shadow-brand-orange/30">
+                <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
+                {t('home.hero_cta')}
+              </Link>
+            </div>
+          </div>
+          </div>
+          </div>
+          {/* Image: right side */}
           {heroImageUrl ? (
-           <>
-            <img
-              src={heroImageUrl}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent" />
-           </>
-         ) : (
-           <div className="absolute inset-0 bg-gradient-to-br from-brand-green via-brand-green to-brand-green-700" />
-         )}
-         <div className="absolute -top-20 ltr:-right-20 rtl:-left-20 w-80 h-80 rounded-full bg-brand-orange/10 blur-3xl" />
-         <div className="absolute -bottom-16 ltr:-left-16 rtl:-right-16 w-60 h-60 rounded-full bg-brand-cream/10 blur-3xl" />
-         <div className="relative z-10 py-16 md:py-24 w-full">
-           <div className="container">
-            <div className="max-w-lg mr-auto ml-12 md:ml-32 lg:ml-40">
-             <h1 className="text-2xl xs:text-3xl md:text-5xl font-extrabold leading-tight text-left">
-               <span className="text-white">{t('home.hero_title_1')}</span>
-               <br />
-               <span className="text-brand-orange">{t('home.hero_title_2')}</span>
-             </h1>
-             <p className="mt-4 text-base text-white/80 text-left">{t('home.hero_subtitle')}</p>
-             <div className="mt-6 text-left">
-               <Link href="/store" className="btn-orange inline-flex shadow-lg shadow-brand-orange/30">
-               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
-               {t('home.hero_cta')}
-             </Link>
-           </div>
-         </div>
-         </div>
-         </div>
-       </section>
+            <div className="relative w-full md:w-1/2 min-h-[200px]">
+              <img src={heroImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent md:hidden" />
+            </div>
+          ) : (
+            <div className="hidden md:block w-1/2 bg-gradient-to-br from-brand-green-700 via-brand-green to-brand-green" />
+          )}
+        </section>
 
       {/* Categories */}
       <section className="container py-10">
