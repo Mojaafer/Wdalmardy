@@ -1125,6 +1125,18 @@ export const updatePurchaseOrderStatus = (id: number, status: string) =>
 export const deletePurchaseOrder = (id: number) =>
   request<{ data: { deleted: boolean } }>(`/admin/purchase-orders/${id}`, { method: 'DELETE' });
 
+// Hero Image
+export const uploadHeroImage = (file: File) => {
+  const fd = new FormData();
+  fd.append('image', file);
+  return request<{ data: { value: string; type: string; group: string; url: string } }>(
+    '/admin/settings/hero-image',
+    { method: 'POST', body: fd },
+  );
+};
+export const deleteHeroImage = () =>
+  request<{ data: { ok: boolean } }>('/admin/settings/hero-image', { method: 'DELETE' });
+
 // Loyalty
 export type LoyaltyTier = {
   key: 'bronze' | 'silver' | 'gold' | 'platinum' | string;

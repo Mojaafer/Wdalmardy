@@ -71,6 +71,7 @@ class SettingAdminController extends Controller
             ['key' => 'store_address', 'type' => 'string', 'group' => 'brand', 'label' => 'العنوان'],
             ['key' => 'currency_code', 'type' => 'string', 'group' => 'brand', 'label' => 'رمز العملة (ISO)'],
             ['key' => 'currency_symbol', 'type' => 'string', 'group' => 'brand', 'label' => 'رمز العملة المعروض'],
+            ['key' => 'hero_image', 'type' => 'string', 'group' => 'brand', 'label' => 'صورة الهيرو (الرئيسية)'],
             // delivery
             ['key' => 'default_delivery_fee', 'type' => 'integer', 'group' => 'delivery', 'label' => 'رسوم التوصيل الافتراضية (ج.س)'],
             ['key' => 'free_delivery_threshold', 'type' => 'integer', 'group' => 'delivery', 'label' => 'الحد الأدنى للتوصيل المجاني (ج.س، 0 لإلغاء)'],
@@ -95,6 +96,40 @@ class SettingAdminController extends Controller
             ['key' => 'backup_retention_days', 'type' => 'integer', 'group' => 'backup', 'label' => 'مدة الاحتفاظ بالأيام'],
             ['key' => 'backup_destination', 'type' => 'string', 'group' => 'backup', 'label' => 'الوجهة (local أو s3)'],
         ];
+    }
+
+    public function uploadHeroImage(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,webp|max:2048',
+        ]);
+
+        $file = $request->file('image');
+        $filename = 'hero_'.time().'.'.$file->extension();
+        $file->storeAs('public/hero', $filename);
+
+        $path = 'hero/'.$filename;
+        Setting::set('hero_image', $path, 'string', 'brand');
+
+        return response()->json([
+            'data' => [
+                'value' => $path,
+                'type' => 'string',
+                'group' => 'brand',
+                'url' => config('app.url').'/storage/'.$path,
+            ],
+        ]);
+    }
+
+    public function deleteHeroImage()
+    {
+        $current = Setting::get('hero_image');
+        if ($current) {
+            Storage::disk('public')->delete($current);
+            Setting::set('hero_image', null, 'string', 'brand');
+        }
+
+        return response()->json(['data' => ['ok' => true]]);
     }
 
     public function backup(Request $request)

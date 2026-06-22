@@ -1,18 +1,22 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Settings, Save, Download, Building2, CreditCard, Truck, Bell, Cog, DatabaseBackup, Play } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Settings, Save, Download, Building2, CreditCard, Truck, Bell, Cog, DatabaseBackup, Play, Upload, Trash2, ImageIcon } from 'lucide-react';
 import {
   getSettings,
   updateSettings,
   downloadBackup,
   listBackups,
   runBackup,
+  uploadHeroImage,
+  deleteHeroImage,
   type AdminSetting,
   type BackupFile,
   type SettingsCatalogEntry,
   type SettingValue,
 } from '@/lib/admin/api';
+
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api').replace(/\/api\/?$/, '');
 
 const GROUP_LABELS: Record<string, string> = {
   brand: 'بيانات المتجر',
@@ -217,14 +221,22 @@ export default function SettingsPage() {
               {GROUP_LABELS[activeGroup] ?? activeGroup}
             </h3>
             <div className="space-y-4">
-              {(grouped.get(activeGroup) ?? []).map((entry) => (
-                <SettingField
-                  key={entry.key}
-                  entry={entry}
-                  value={getValue(entry.key)}
-                  onChange={(v) => setLocal(entry.key, v)}
+              {(grouped.get(activeGroup) ?? []).map((entry) =>
+                entry.key === 'hero_image' ? null : (
+                  <SettingField
+                    key={entry.key}
+                    entry={entry}
+                    value={getValue(entry.key)}
+                    onChange={(v) => setLocal(entry.key, v)}
+                  />
+                )
+              )}
+              {activeGroup === 'brand' && (
+                <HeroImageField
+                  value={getValue('hero_image') as string | null | undefined}
+                  onChange={(v) => setLocal('hero_image', v)}
                 />
-              ))}
+              )}
             </div>
             {activeGroup === 'backup' && (
               <div className="mt-6 border-t border-slate-100 pt-4">
@@ -247,6 +259,87 @@ export default function SettingsPage() {
           </section>
         </div>
       )}
+    </div>
+  );
+}
+
+function HeroImageField({
+  value,
+  onChange,
+}: {
+  value: string | null | undefined;
+  onChange: (v: string | null) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const imageUrl = value
+    ? value.startsWith('http')
+      ? value
+      : `${API_BASE}/storage/${value}`
+    : null;
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const res = await uploadHeroImage(file);
+      onChange(res.data.value);
+    } catch {
+      // error handled upstream
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRemove() {
+    setUploading(true);
+    try {
+      await deleteHeroImage();
+      onChange(null);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-slate-700 mb-1.5">صورة الهيرو (الرئيسية)</label>
+      {imageUrl ? (
+        <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+          <img
+            src={imageUrl}
+            alt="Hero"
+            className="w-full h-48 object-cover"
+          />
+          <button
+            type="button"
+            onClick={handleRemove}
+            disabled={uploading}
+            className="absolute top-2 left-2 bg-rose-600 text-white p-2 rounded-lg hover:bg-rose-700 disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <div
+          onClick={() => inputRef.current?.click()}
+          className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-[#0E5C3A] transition"
+        >
+          <ImageIcon className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+          <div className="text-sm text-slate-500">انقر لرفع صورة الهيرو</div>
+          <div className="text-xs text-slate-400 mt-1">JPEG, PNG, WebP — حد أقصى 2MB</div>
+        </div>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleFile}
+      />
+      {uploading && <div className="text-xs text-slate-500 mt-1">جاري الرفع...</div>}
     </div>
   );
 }

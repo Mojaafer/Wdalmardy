@@ -313,6 +313,8 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::put('/settings', [SettingAdminController::class, 'update']);
         Route::get('/settings/backup', [SettingAdminController::class, 'backup']);
         Route::get('/settings/backups', [SettingAdminController::class, 'backups']);
+        Route::post('/settings/hero-image', [SettingAdminController::class, 'uploadHeroImage']);
+        Route::delete('/settings/hero-image', [SettingAdminController::class, 'deleteHeroImage']);
     });
 
     Route::middleware('permission:branches.view')->group(function () {

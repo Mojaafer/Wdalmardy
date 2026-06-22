@@ -1,5 +1,7 @@
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
+  typeof window === 'undefined'
+    ? (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api')
+    : (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api');
 
 export type LocalizedString = { ar: string; en: string };
 
@@ -169,6 +171,10 @@ export type ActiveOffer = {
 
 export async function getActiveOffers(): Promise<{ data: ActiveOffer[] }> {
   return request('/offers/active');
+}
+
+export async function getPublicSettings(): Promise<{ data: Record<string, unknown> }> {
+  return request('/settings');
 }
 
 export type CouponValidation = {

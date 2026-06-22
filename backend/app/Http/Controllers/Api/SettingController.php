@@ -21,6 +21,7 @@ class SettingController extends Controller
             'free_delivery_threshold',
             'payment_cod_enabled', 'payment_bank_enabled', 'payment_bank_details',
             'payment_bok_enabled', 'payment_mokash_enabled',
+            'hero_image',
         ];
 
         $public = [];

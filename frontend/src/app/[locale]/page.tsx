@@ -1,4 +1,4 @@
-import { getCategories, getProducts } from '@/lib/api';
+import { getCategories, getProducts, getPublicSettings } from '@/lib/api';
 import { CategoryCard } from '@/components/CategoryCard';
 import { ProductCard } from '@/components/ProductCard';
 import OffersBanner from '@/components/OffersBanner';
@@ -6,23 +6,33 @@ import { Link } from '@/i18n/routing';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { ArrowLeft, Bike, MessageCircle, Phone, ListChecks } from 'lucide-react';
 
+const API_BASE = (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api').replace(/\/api\/?$/, '');
+
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations();
 
-  const [{ data: categories }, featured, latest] = await Promise.all([
+  const [{ data: categories }, featured, latest, settings] = await Promise.all([
     getCategories().catch(() => ({ data: [] })),
     getProducts({ featured: 1, per_page: 4 }).catch(() => ({ data: [] })),
     getProducts({ per_page: 8, sort: 'newest' }).catch(() => ({ data: [] })),
+    getPublicSettings().catch(() => ({ data: {} })),
   ]);
+
+  const heroImage = settings.data?.hero_image as string | undefined;
+  const heroImageUrl = heroImage
+    ? heroImage.startsWith('http')
+      ? heroImage
+      : `${API_BASE}/storage/${heroImage}`
+    : null;
 
   return (
     <div>
       {/* Active offers banner from CMS */}
       <OffersBanner locale={locale} />
 
-      {/* Hero */}
+       {/* Hero */}
       <section className="bg-brand-cream-100 overflow-hidden">
         <div className="container grid md:grid-cols-2 gap-6 py-10 md:py-14 items-center">
           <div>
@@ -37,8 +47,16 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               {t('home.hero_cta')}
             </Link>
           </div>
-          <div className="relative aspect-[4/3] rounded-2xl bg-white/40 grid place-items-center text-9xl text-brand-orange font-extrabold">
-            ج
+          <div className={`relative aspect-[4/3] rounded-2xl ${heroImageUrl ? 'overflow-hidden' : 'bg-white/40 grid place-items-center'}`}>
+            {heroImageUrl ? (
+              <img
+                src={heroImageUrl}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-9xl text-brand-orange font-extrabold">ج</span>
+            )}
           </div>
         </div>
       </section>
