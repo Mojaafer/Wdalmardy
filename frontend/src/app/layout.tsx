@@ -1,9 +1,14 @@
 import type { ReactNode } from 'react';
+import { Cairo, Inter } from 'next/font/google';
+import './globals.css';
 
-// The locale layout is the only one that renders <html> / <body>. This
-// pass-through layout is required so Next.js can find a root layout, and
-// keeps next-intl's per-locale layout in charge of HTML attributes (lang,
-// dir, fonts).
+const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+
 export default function RootLayout({ children }: { children: ReactNode }) {
-  return children;
+  return (
+    <html lang="ar" dir="rtl" className={`${cairo.variable} ${inter.variable}`}>
+      <body>{children}</body>
+    </html>
+  );
 }

@@ -33,33 +33,31 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       <OffersBanner locale={locale} />
 
        {/* Hero */}
-      <section className="bg-brand-cream-100 overflow-hidden">
-        <div className="container grid md:grid-cols-2 gap-6 py-10 md:py-14 items-center">
-          <div>
-            <h1 className="text-3xl md:text-5xl font-extrabold leading-tight">
-              <span className="text-brand-ink">{t('home.hero_title_1')}</span>
-              <br />
-              <span className="text-brand-orange">{t('home.hero_title_2')}</span>
-            </h1>
-            <p className="mt-4 text-base text-brand-ink/80">{t('home.hero_subtitle')}</p>
-            <Link href="/store" className="mt-6 btn-orange inline-flex">
-              <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
-              {t('home.hero_cta')}
-            </Link>
-          </div>
-          <div className={`relative aspect-[4/3] rounded-2xl ${heroImageUrl ? 'overflow-hidden' : 'bg-white/40 grid place-items-center'}`}>
-            {heroImageUrl ? (
-              <img
-                src={heroImageUrl}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-9xl text-brand-orange font-extrabold">ج</span>
-            )}
-          </div>
-        </div>
-      </section>
+       <section className="relative overflow-hidden min-h-[300px] xs:min-h-[400px] md:min-h-[500px] flex items-center bg-brand-cream-100">
+          {heroImageUrl && (
+           <img
+             src={heroImageUrl}
+             alt=""
+             className="absolute inset-0 w-full h-full object-contain"
+           />
+         )}
+         <div className="relative z-10 py-16 md:py-24 w-full px-4 md:px-8 lg:px-16">
+            <div className="max-w-lg mr-auto ml-24 md:ml-48 lg:ml-60">
+             <h1 className="text-2xl xs:text-3xl md:text-5xl font-extrabold leading-tight text-left">
+               <span className="text-brand-green">{t('home.hero_title_1')}</span>
+               <br />
+               <span className={heroImageUrl ? 'text-brand-orange' : 'text-brand-orange'}>{t('home.hero_title_2')}</span>
+             </h1>
+             <p className="mt-4 text-base text-brand-green text-left">{t('home.hero_subtitle')}</p>
+             <div className="mt-6 text-left">
+               <Link href="/store" className="btn-orange inline-flex">
+               <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
+               {t('home.hero_cta')}
+             </Link>
+           </div>
+         </div>
+         </div>
+       </section>
 
       {/* Categories */}
       <section className="container py-10">
@@ -67,7 +65,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           <h2 className="text-2xl font-extrabold">{t('home.shop_by_category')}</h2>
           <div className="mt-1 mx-auto h-1 w-16 rounded-full bg-brand-orange" />
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {categories.slice(0, 6).map((c) => (
             <CategoryCard key={c.id} category={c} />
           ))}
@@ -141,7 +139,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           <h2 className="text-xl font-extrabold">{t('home.order_fast_title')}</h2>
           <p className="text-sm text-gray-500 mt-1">{t('home.order_fast_sub')}</p>
         </div>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid xs:grid-cols-3 gap-4">
           <a
             href={`https://wa.me/${process.env.NEXT_PUBLIC_WA_PHONE ?? '249123456789'}`}
             target="_blank"

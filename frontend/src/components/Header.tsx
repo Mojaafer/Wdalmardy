@@ -28,52 +28,52 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
-      <div className="container flex h-16 items-center gap-4">
+      <div className="container flex h-20 xs:h-28 items-center gap-2 xs:gap-4">
         <Link href="/" className="flex-shrink-0">
           <Logo />
         </Link>
 
         <form
           action="/store"
-          className="hidden md:flex flex-1 max-w-xl items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2"
+          className="hidden xs:flex flex-1 max-w-xl items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2"
         >
-          <Search className="h-4 w-4 text-gray-400" />
+          <Search className="h-4 w-4 text-gray-400 shrink-0" />
           <input
             name="q"
             placeholder={t('search_placeholder')}
-            className="flex-1 bg-transparent text-sm outline-none"
+            className="flex-1 bg-transparent text-sm outline-none min-w-0"
           />
         </form>
 
         <div className="ms-auto flex items-center gap-1">
           <a
             href={`/${otherLocale}`}
-            className="hidden sm:inline-flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium hover:bg-gray-100"
+            className="hidden xs:inline-flex items-center gap-1 rounded-full px-2 xs:px-3 py-2 text-sm font-medium hover:bg-gray-100"
           >
             <Globe className="h-4 w-4" />
-            {t('language')}
+            <span className="hidden xs:inline">{t('language')}</span>
           </a>
           {isAuthenticated ? (
             <Link
               href="/account"
-              className="hidden sm:inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium hover:bg-gray-100"
+              className="hidden xs:inline-flex items-center gap-2 rounded-full px-2 xs:px-3 py-2 text-sm font-medium hover:bg-gray-100"
             >
               <User className="h-4 w-4" />
-              {customer?.name || t('account')}
+              <span className="hidden xs:inline">{customer?.name || t('account')}</span>
             </Link>
           ) : (
             <Link
               href="/login"
-              className="hidden sm:inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium hover:bg-gray-100"
+              className="hidden xs:inline-flex items-center gap-2 rounded-full px-2 xs:px-3 py-2 text-sm font-medium hover:bg-gray-100"
             >
               <LogIn className="h-4 w-4" />
-              {t('login')}
+              <span className="hidden xs:inline">{t('login')}</span>
             </Link>
           )}
           <CartBadge />
           <button
             onClick={() => setOpen((v) => !v)}
-            className="md:hidden grid h-10 w-10 place-items-center rounded-full hover:bg-gray-100"
+            className="flex xs:hidden h-10 w-10 place-items-center rounded-full hover:bg-gray-100"
             aria-label="Menu"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -106,6 +106,16 @@ export function Header() {
 
       {open && (
         <div className="md:hidden border-t border-gray-100 bg-white">
+          <div className="container py-2 border-b border-gray-100">
+            <form action="/store" className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2">
+              <Search className="h-4 w-4 text-gray-400 shrink-0" />
+              <input
+                name="q"
+                placeholder={t('search_placeholder')}
+                className="flex-1 bg-transparent text-sm outline-none min-w-0"
+              />
+            </form>
+          </div>
           <ul className="container flex flex-col py-2">
             {NAV.map((item) => (
               <li key={item.key}>

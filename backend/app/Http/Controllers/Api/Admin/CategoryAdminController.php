@@ -65,13 +65,13 @@ class CategoryAdminController extends Controller
             'image' => 'required|image|mimes:jpeg,png,webp|max:2048',
         ]);
 
-        if ($category->image && !str_starts_with($category->image, 'http')) {
+        if ($category->image && ! str_starts_with($category->image, 'http')) {
             Storage::disk('public')->delete($category->image);
         }
 
         $file = $request->file('image');
         $filename = 'cat_'.$category->id.'_'.time().'.'.$file->extension();
-        $file->storeAs('public/categories', $filename);
+        $file->storeAs('categories', $filename, 'public');
 
         $category->update(['image' => 'categories/'.$filename]);
 
@@ -80,7 +80,7 @@ class CategoryAdminController extends Controller
 
     public function deleteImage(Category $category)
     {
-        if ($category->image && !str_starts_with($category->image, 'http')) {
+        if ($category->image && ! str_starts_with($category->image, 'http')) {
             Storage::disk('public')->delete($category->image);
         }
 

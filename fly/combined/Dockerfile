@@ -25,6 +25,11 @@ RUN apk add --no-cache \
     xml
 
 # Install Composer manually
+# Increase PHP upload limits
+RUN echo "upload_max_filesize = 20M" > /usr/local/etc/php/conf.d/uploads.ini \
+    && echo "post_max_size = 20M" >> /usr/local/etc/php/conf.d/uploads.ini
+
+# Install Composer manually
 RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
     && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
     && php -r "unlink('composer-setup.php');"
@@ -41,9 +46,15 @@ COPY backend/ .
 # Run post-install scripts
 RUN composer dump-autoload && php artisan package:discover --ansi
 
-# Create storage bootstrap directories
+# Create storage bootstrap + public upload directories
 RUN mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache \
     && mkdir -p storage/logs bootstrap/cache \
+    && mkdir -p storage/app/public/products \
+    && mkdir -p storage/app/public/offers \
+    && mkdir -p storage/app/public/categories \
+    && mkdir -p storage/app/public/suppliers \
+    && mkdir -p storage/app/public/hero \
+    && mkdir -p storage/app/public/logo \
     && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 

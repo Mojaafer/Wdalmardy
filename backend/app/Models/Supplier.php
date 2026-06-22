@@ -11,9 +11,14 @@ class Supplier extends Model
 
     public function logoUrl(): ?string
     {
-        if (!$this->logo) return null;
-        if (str_starts_with($this->logo, 'http')) return $this->logo;
-        return config('app.url') . '/storage/' . $this->logo;
+        if (! $this->logo) {
+            return null;
+        }
+        if (str_starts_with($this->logo, 'http')) {
+            return $this->logo;
+        }
+
+        return config('app.url').'/storage/'.$this->logo;
     }
 
     protected $fillable = [

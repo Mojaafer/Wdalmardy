@@ -1159,6 +1159,17 @@ export const uploadHeroImage = (file: File) => {
 export const deleteHeroImage = () =>
   request<{ data: { ok: boolean } }>('/admin/settings/hero-image', { method: 'DELETE' });
 
+export const uploadLogo = (file: File) => {
+  const fd = new FormData();
+  fd.append('image', file);
+  return request<{ data: { value: string; url: string } }>(
+    '/admin/settings/logo',
+    { method: 'POST', body: fd },
+  );
+};
+export const deleteLogo = () =>
+  request<{ data: { ok: boolean } }>('/admin/settings/logo', { method: 'DELETE' });
+
 // Loyalty
 export type LoyaltyTier = {
   key: 'bronze' | 'silver' | 'gold' | 'platinum' | string;

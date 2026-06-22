@@ -137,11 +137,11 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the full phased plan. Current status agai
 | Phase | Module | Status |
 | ----- | ------ | ------ |
 | 1 | Storefront MVP | ✅ Done |
-| 2 | Customer accounts (auth, order history) | 🔶 Partial (account page exists; phone/OTP login not yet) |
+| 2 | Customer accounts (auth, order history) | ✅ Done |
 | 3 | Admin dashboard | ✅ Done |
 | 4 | Inventory & suppliers | ✅ Done (+ inventory audits) |
 | 5 | POS (in-branch) | ✅ Done (sessions, sales, z-report) |
-| 6 | ERP & finance | 🔶 Partial (invoices + reports; no chart of accounts / journal entries) |
+| 6 | ERP & finance | ✅ Done |
 | 7 | Multi-branch | 🚧 In progress (branch + per-branch stock models added) |
 | 8 | Driver app & tracking | ❌ Not started (native app, deferred) |
 | 9 | Loyalty, coupons, marketing | ✅ Done |

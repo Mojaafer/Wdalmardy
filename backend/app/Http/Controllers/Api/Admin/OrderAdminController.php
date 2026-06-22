@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Controller;
+use App\Models\BranchProductStock;
+use App\Models\EmployeeActivity;
 use App\Models\Order;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
+use Illuminate\Validation\ValidationException;
 use Mpdf\Mpdf;
 
 class OrderAdminController extends Controller
@@ -75,6 +79,98 @@ class OrderAdminController extends Controller
 
         DB::transaction(function () use ($order, $validated) {
             $order->update($validated);
+        });
+
+        return response()->json(['data' => $order->fresh(['items', 'driver:id,name'])]);
+    }
+
+    /**
+     * Reassign an order's fulfilment to a different branch.
+     *
+     * Moves the stock reservation: each line item is returned to the old
+     * branch and re-sold at the new branch, guarding that the destination
+     * branch holds sufficient stock. Cancelled orders are excluded (their
+     * stock was already reversed). The order itself is not re-decremented
+     * — only the per-branch ledger is rebalanced.
+     */
+    public function assignBranch(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'branch_id' => 'required|integer|exists:branches,id',
+        ]);
+
+        $newBranchId = (int) $validated['branch_id'];
+        $oldBranchId = (int) $order->branch_id;
+
+        if ($order->status === 'cancelled') {
+            throw ValidationException::withMessages([
+                'order' => 'لا يمكن تغيير فرع طلب ملغى.',
+            ]);
+        }
+
+        if ($newBranchId === $oldBranchId) {
+            return response()->json(['data' => $order->fresh(['items', 'driver:id,name'])]);
+        }
+
+        DB::transaction(function () use ($order, $newBranchId, $oldBranchId, $request) {
+            // Verify the destination branch can cover every line before
+            // touching any stock, locking the rows to avoid races.
+            $productIds = $order->items->pluck('product_id')->unique()->all();
+            $destStocks = BranchProductStock::query()
+                ->where('branch_id', $newBranchId)
+                ->whereIn('product_id', $productIds)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('product_id');
+
+            foreach ($order->items as $item) {
+                $available = (int) ($destStocks[$item->product_id]->stock ?? 0);
+                if ($available < (int) $item->quantity) {
+                    throw ValidationException::withMessages([
+                        'branch_id' => 'الفرع المختار لا يملك مخزوناً كافياً من "'.($item->name_ar ?? '').'" (المتاح: '.$available.').',
+                    ]);
+                }
+            }
+
+            // Rebalance: return to the old branch, then sell at the new branch.
+            foreach ($order->items as $item) {
+                if (! $item->product) {
+                    continue;
+                }
+                if ($oldBranchId) {
+                    StockMovement::record(
+                        product: $item->product,
+                        type: 'in',
+                        reason: 'return',
+                        quantity: (int) $item->quantity,
+                        userId: (int) $request->user()->id,
+                        referenceType: 'order_branch_reassign',
+                        referenceId: $order->id,
+                        notes: 'إعادة توجيه طلب '.$order->order_number,
+                        branchId: $oldBranchId,
+                    );
+                }
+                StockMovement::record(
+                    product: $item->product,
+                    type: 'out',
+                    reason: 'sale',
+                    quantity: (int) $item->quantity,
+                    userId: (int) $request->user()->id,
+                    referenceType: 'order_branch_reassign',
+                    referenceId: $order->id,
+                    notes: 'إعادة توجيه طلب '.$order->order_number,
+                    branchId: $newBranchId,
+                );
+            }
+
+            $order->update(['branch_id' => $newBranchId]);
+
+            EmployeeActivity::log(
+                (int) $request->user()->id,
+                'order.branch_reassigned',
+                'أعاد توجيه الطلب '.$order->order_number,
+                ['old_branch_id' => $oldBranchId, 'new_branch_id' => $newBranchId],
+            );
         });
 
         return response()->json(['data' => $order->fresh(['items', 'driver:id,name'])]);

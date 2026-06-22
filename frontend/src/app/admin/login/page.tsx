@@ -11,10 +11,24 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('password');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (getToken()) router.replace('/admin');
   }, [router]);
+
+  useEffect(() => {
+    const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api').replace(/\/api\/?$/, '');
+    fetch(`${API_BASE}/api/settings`)
+      .then((r) => r.json())
+      .then((res) => {
+        const url = res.data?.store_logo as string | undefined;
+        if (url) {
+          setLogoUrl(url.startsWith('http') ? url : `${API_BASE}/storage/${url}`);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -39,9 +53,13 @@ export default function AdminLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0E5C3A] to-[#0a4429] p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#FBEFE2] text-[#0E5C3A] font-extrabold text-2xl mb-3">
-            ود
-          </div>
+          {logoUrl ? (
+            <img src={logoUrl} alt="ود المرضي ماركت" className="h-16 w-auto object-contain mx-auto mb-3" />
+          ) : (
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#FBEFE2] text-[#0E5C3A] font-extrabold text-2xl mb-3">
+              ود
+            </div>
+          )}
           <h1 className="text-2xl font-extrabold text-slate-900">لوحة التحكم</h1>
           <p className="text-sm text-slate-500">ود المرضي ماركت</p>
         </div>

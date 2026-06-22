@@ -108,7 +108,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute left-0 mt-2 w-[360px] bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden" dir="rtl">
+        <div className="absolute left-0 mt-2 w-[90vw] xs:w-[360px] bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden" dir="rtl">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <span className="font-bold text-slate-800">الإشعارات</span>
             <button

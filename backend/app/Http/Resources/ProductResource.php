@@ -34,6 +34,15 @@ class ProductResource extends JsonResource
                 : 0,
             'stock' => $this->stock,
             'in_stock' => $this->stock > 0,
+            // Per-branch availability, surfaced only when the relation has been
+            // eager-loaded (e.g. the admin product index with ?branch_id=).
+            'branch_stock' => $this->whenLoaded('branchStocks', function () {
+                return $this->branchStocks->map(fn ($row) => [
+                    'branch_id' => $row->branch_id,
+                    'stock' => (int) $row->stock,
+                    'low_stock_threshold' => (int) $row->low_stock_threshold,
+                ]);
+            }),
             'is_active' => (bool) $this->is_active,
             'is_featured' => $this->is_featured,
             'rating' => (float) $this->rating,

@@ -119,13 +119,13 @@ class SupplierAdminController extends Controller
             'logo' => 'required|image|mimes:jpeg,png,webp|max:2048',
         ]);
 
-        if ($supplier->logo && !str_starts_with($supplier->logo, 'http')) {
+        if ($supplier->logo && ! str_starts_with($supplier->logo, 'http')) {
             Storage::disk('public')->delete($supplier->logo);
         }
 
         $file = $request->file('logo');
         $filename = 'supplier_'.$supplier->id.'_'.time().'.'.$file->extension();
-        $file->storeAs('public/suppliers', $filename);
+        $file->storeAs('suppliers', $filename, 'public');
 
         $supplier->update(['logo' => 'suppliers/'.$filename]);
 
@@ -134,7 +134,7 @@ class SupplierAdminController extends Controller
 
     public function deleteLogo(Request $request, Supplier $supplier)
     {
-        if ($supplier->logo && !str_starts_with($supplier->logo, 'http')) {
+        if ($supplier->logo && ! str_starts_with($supplier->logo, 'http')) {
             Storage::disk('public')->delete($supplier->logo);
         }
 

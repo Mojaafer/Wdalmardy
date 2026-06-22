@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\Admin\ProductAdminController;
 use App\Http\Controllers\Api\Admin\PurchaseOrderAdminController;
 use App\Http\Controllers\Api\Admin\ReportsAdminController;
 use App\Http\Controllers\Api\Admin\SettingAdminController;
+use App\Http\Controllers\Api\Admin\StockTransferAdminController;
 use App\Http\Controllers\Api\Admin\SupplierAdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
@@ -54,40 +55,47 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{slug}', [CategoryController::class, 'show']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{slug}', [ProductController::class, 'show']);
-Route::post('/orders', [OrderController::class, 'store']);
+Route::middleware('throttle:'.(int) env('RATE_LIMIT_ORDERS', 20).',1')->group(function () {
+    Route::post('/orders', [OrderController::class, 'store']);
+});
 Route::get('/offers/active', [OfferController::class, 'active']);
 Route::post('/coupons/validate', [CouponController::class, 'validate']);
 Route::get('/delivery-zones', [DeliveryZoneController::class, 'index']);
 Route::get('/loyalty/balance', [LoyaltyController::class, 'balance']);
 Route::get('/pages', [PageController::class, 'index']);
 Route::get('/pages/{slug}', [PageController::class, 'show']);
-Route::post('/messages', [MessageController::class, 'store']);
+Route::middleware('throttle:30,1')->group(function () {
+    Route::post('/messages', [MessageController::class, 'store']);
+});
 Route::get('/settings', [SettingController::class, 'public_index']);
 
-// Customer auth — public OTP endpoints
-Route::prefix('auth')->controller(AuthController::class)->group(function () {
-    Route::post('/request-otp', 'requestOtp');
-    Route::post('/verify-otp', 'verifyOtp');
-
-    // Protected customer self-service routes
-    Route::middleware(['auth:sanctum', 'customer'])->group(function () {
-        Route::get('/me', 'me');
-        Route::post('/logout', 'logout');
-        Route::put('/profile', 'updateProfile');
-        Route::get('/addresses', 'addresses');
-        Route::put('/addresses', 'updateAddresses');
-        Route::get('/orders', 'orders');
+// Customer auth — public OTP endpoints (throttled tightly to deter abuse)
+Route::middleware('throttle:'.(int) env('RATE_LIMIT_OTP', 5).',1')->group(function () {
+    Route::prefix('auth')->controller(AuthController::class)->group(function () {
+        Route::post('/request-otp', 'requestOtp');
+        Route::post('/verify-otp', 'verifyOtp');
     });
 });
 
-// Admin auth
-Route::post('/admin/login', [AdminAuthController::class, 'login']);
+Route::prefix('auth')->controller(AuthController::class)->middleware(['auth:sanctum', 'customer'])->group(function () {
+    Route::get('/me', 'me');
+    Route::post('/logout', 'logout');
+    Route::put('/profile', 'updateProfile');
+    Route::get('/addresses', 'addresses');
+    Route::put('/addresses', 'updateAddresses');
+    Route::get('/orders', 'orders');
+    Route::get('/orders/{orderId}', 'showOrder')->whereNumber('orderId');
+});
+
+// Admin auth — throttled aggressively to mitigate brute force
+Route::middleware('throttle:'.(int) env('RATE_LIMIT_LOGIN', 10).',1')
+    ->post('/admin/login', [AdminAuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     Route::get('/me', [AdminAuthController::class, 'me']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/logout', [AdminAuthController::class, 'logout']);
 
-    Route::get('/dashboard', DashboardController::class);
+    Route::middleware('permission:dashboard.view')->get('/dashboard', DashboardController::class);
 
     Route::middleware('permission:products.view')->group(function () {
         Route::get('/products', [ProductAdminController::class, 'index']);
@@ -122,6 +130,7 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
     });
     Route::middleware('permission:orders.manage')->group(function () {
         Route::post('/orders/{order}/status', [OrderAdminController::class, 'updateStatus']);
+        Route::post('/orders/{order}/assign-branch', [OrderAdminController::class, 'assignBranch']);
     });
 
     Route::middleware('permission:customers.view')->group(function () {
@@ -196,6 +205,18 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::post('/inventory/audit-sessions', [InventoryAuditAdminController::class, 'store']);
         Route::put('/inventory/audit-sessions/{session}/items/{item}', [InventoryAuditAdminController::class, 'updateItem']);
         Route::post('/inventory/audit-sessions/{session}/close', [InventoryAuditAdminController::class, 'close']);
+    });
+
+    // Inter-branch stock transfers
+    Route::middleware('permission:inventory.view')->group(function () {
+        Route::get('/stock-transfers', [StockTransferAdminController::class, 'index']);
+        Route::get('/stock-transfers/{transfer}', [StockTransferAdminController::class, 'show']);
+    });
+    Route::middleware('permission:inventory.manage')->group(function () {
+        Route::post('/stock-transfers', [StockTransferAdminController::class, 'store']);
+        Route::post('/stock-transfers/{transfer}/dispatch', [StockTransferAdminController::class, 'dispatch']);
+        Route::post('/stock-transfers/{transfer}/receive', [StockTransferAdminController::class, 'receive']);
+        Route::post('/stock-transfers/{transfer}/cancel', [StockTransferAdminController::class, 'cancel']);
     });
 
     Route::middleware('permission:delivery.view')->group(function () {
@@ -319,6 +340,8 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::get('/settings/backups', [SettingAdminController::class, 'backups']);
         Route::post('/settings/hero-image', [SettingAdminController::class, 'uploadHeroImage']);
         Route::delete('/settings/hero-image', [SettingAdminController::class, 'deleteHeroImage']);
+        Route::post('/settings/logo', [SettingAdminController::class, 'uploadLogo']);
+        Route::delete('/settings/logo', [SettingAdminController::class, 'deleteLogo']);
     });
 
     Route::middleware('permission:branches.view')->group(function () {

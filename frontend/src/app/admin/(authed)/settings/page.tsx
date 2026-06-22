@@ -10,6 +10,8 @@ import {
   runBackup,
   uploadHeroImage,
   deleteHeroImage,
+  uploadLogo,
+  deleteLogo,
   type AdminSetting,
   type BackupFile,
   type SettingsCatalogEntry,
@@ -232,10 +234,16 @@ export default function SettingsPage() {
                 )
               )}
               {activeGroup === 'brand' && (
-                <HeroImageField
-                  value={getValue('hero_image') as string | null | undefined}
-                  onChange={(v) => setLocal('hero_image', v)}
-                />
+                <>
+                  <LogoImageField
+                    value={getValue('store_logo') as string | null | undefined}
+                    onChange={(v) => setLocal('store_logo', v)}
+                  />
+                  <HeroImageField
+                    value={getValue('hero_image') as string | null | undefined}
+                    onChange={(v) => setLocal('hero_image', v)}
+                  />
+                </>
               )}
             </div>
             {activeGroup === 'backup' && (
@@ -259,6 +267,91 @@ export default function SettingsPage() {
           </section>
         </div>
       )}
+    </div>
+  );
+}
+
+function LogoImageField({
+  value,
+  onChange,
+}: {
+  value: string | null | undefined;
+  onChange: (v: string | null) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const imageUrl = value
+    ? value.startsWith('http')
+      ? value
+      : `${API_BASE}/storage/${value}`
+    : null;
+
+  const [logoError, setLogoError] = useState<string | null>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoError(null);
+    setUploading(true);
+    try {
+      const res = await uploadLogo(file);
+      onChange(res.data.value);
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : 'فشل الرفع');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRemove() {
+    setUploading(true);
+    try {
+      await deleteLogo();
+      onChange(null);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-slate-700 mb-1.5">شعار المتجر</label>
+      {imageUrl ? (
+        <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50 inline-block">
+          <img
+            src={imageUrl}
+            alt="Logo"
+            className="h-24 w-auto object-contain"
+          />
+          <button
+            type="button"
+            onClick={handleRemove}
+            disabled={uploading}
+            className="absolute top-2 left-2 bg-rose-600 text-white p-2 rounded-lg hover:bg-rose-700 disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <div
+          onClick={() => inputRef.current?.click()}
+          className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center cursor-pointer hover:border-[#0E5C3A] transition inline-block"
+        >
+          <ImageIcon className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+          <div className="text-sm text-slate-500">انقر لرفع شعار المتجر</div>
+          <div className="text-xs text-slate-400 mt-1">JPEG, PNG, WebP — حد أقصى 5MB</div>
+        </div>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleFile}
+      />
+      {uploading && <div className="text-xs text-slate-500 mt-1">جاري الرفع...</div>}
+      {logoError && <div className="text-xs text-rose-600 mt-1">{logoError}</div>}
     </div>
   );
 }
@@ -329,7 +422,7 @@ function HeroImageField({
         >
           <ImageIcon className="w-10 h-10 mx-auto text-slate-300 mb-2" />
           <div className="text-sm text-slate-500">انقر لرفع صورة الهيرو</div>
-          <div className="text-xs text-slate-400 mt-1">JPEG, PNG, WebP — حد أقصى 2MB</div>
+          <div className="text-xs text-slate-400 mt-1">JPEG, PNG, WebP — حد أقصى 5MB</div>
         </div>
       )}
       <input

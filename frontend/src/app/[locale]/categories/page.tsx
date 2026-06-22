@@ -19,7 +19,7 @@ export default async function CategoriesPage({
         <p className="text-sm text-gray-500 mt-1">{t('categories.subtitle')}</p>
         <div className="mt-2 mx-auto h-1 w-16 rounded-full bg-brand-orange" />
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-4 gap-4">
         {categories.map((c) => (
           <CategoryCard key={c.id} category={c} />
         ))}

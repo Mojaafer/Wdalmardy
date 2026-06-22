@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
+use App\Models\BranchProductStock;
 use App\Models\EmployeeActivity;
 use App\Models\Product;
 use App\Models\StockMovement;
@@ -14,7 +16,7 @@ class InventoryAdminController extends Controller
     public function movements(Request $request)
     {
         $query = StockMovement::query()
-            ->with(['product:id,name_ar,name_en,slug', 'user:id,name'])
+            ->with(['product:id,name_ar,name_en,slug', 'user:id,name', 'branch:id,name_ar'])
             ->orderByDesc('id');
 
         if ($type = $request->string('type')->toString()) {
@@ -22,6 +24,9 @@ class InventoryAdminController extends Controller
         }
         if ($productId = $request->integer('product_id')) {
             $query->where('product_id', $productId);
+        }
+        if ($branchId = $request->integer('branch_id')) {
+            $query->where('branch_id', $branchId);
         }
         if ($q = $request->string('q')->toString()) {
             $query->whereHas('product', function ($w) use ($q) {
@@ -41,13 +46,41 @@ class InventoryAdminController extends Controller
                 'current_page' => $movements->currentPage(),
                 'last_page' => $movements->lastPage(),
             ],
-            'stats' => $this->stats(),
+            'stats' => $this->stats($request),
         ]);
     }
 
     public function lowStock(Request $request)
     {
         $threshold = (int) $request->integer('threshold', 10);
+        $branchId = $request->integer('branch_id') ?: null;
+
+        // When a branch is in context, low-stock is read from the per-branch
+        // rows against their own thresholds; otherwise from the aggregate.
+        if ($branchId) {
+            $rows = BranchProductStock::query()
+                ->where('branch_id', $branchId)
+                ->whereColumn('stock', '<=', 'low_stock_threshold')
+                ->whereHas('product', fn ($q) => $q->where('is_active', true))
+                ->with('product:id,slug,name_ar,name_en,price,unit_ar')
+                ->orderBy('stock')
+                ->limit(100)
+                ->get();
+
+            return response()->json([
+                'data' => $rows->map(fn (BranchProductStock $row) => [
+                    'id' => $row->product->id,
+                    'slug' => $row->product->slug,
+                    'name_ar' => $row->product->name_ar,
+                    'name_en' => $row->product->name_en,
+                    'stock' => (int) $row->stock,
+                    'price' => (float) $row->product->price,
+                    'unit_ar' => $row->product->unit_ar,
+                ]),
+                'threshold' => $threshold,
+                'branch_id' => $branchId,
+            ]);
+        }
 
         $products = Product::query()
             ->where('is_active', true)
@@ -77,10 +110,12 @@ class InventoryAdminController extends Controller
             'type' => 'required|in:in,out,adjustment',
             'reason' => 'required|in:restock,return,damage,manual',
             'quantity' => 'required|integer',
+            'branch_id' => 'nullable|integer|exists:branches,id',
             'notes' => 'nullable|string|max:500',
         ]);
 
         $product = Product::findOrFail($data['product_id']);
+        $branchId = (int) ($data['branch_id'] ?? Branch::defaultId());
 
         $movement = DB::transaction(fn () => StockMovement::record(
             $product,
@@ -91,6 +126,7 @@ class InventoryAdminController extends Controller
             'manual',
             null,
             $data['notes'] ?? null,
+            $branchId,
         ));
 
         EmployeeActivity::log(
@@ -103,8 +139,25 @@ class InventoryAdminController extends Controller
         return response()->json(['data' => $this->serialize($movement->load(['product:id,name_ar,name_en,slug', 'user:id,name']))], 201);
     }
 
-    public function stats(): array
+    public function stats(?Request $request = null): array
     {
+        $branchId = $request?->integer('branch_id') ?: null;
+
+        // Per-branch stats read from branch_product_stocks; otherwise from the
+        // aggregate products.stock column.
+        if ($branchId) {
+            $base = BranchProductStock::query()->where('branch_id', $branchId);
+            $activeProducts = Product::where('is_active', true)->count();
+
+            return [
+                'total_products' => $activeProducts,
+                'low_stock' => (clone $base)->whereColumn('stock', '<=', 'low_stock_threshold')->count(),
+                'out_of_stock' => (clone $base)->where('stock', '<=', 0)->count(),
+                'total_stock_units' => (int) (clone $base)->sum('stock'),
+                'branch_id' => $branchId,
+            ];
+        }
+
         $totalProducts = Product::where('is_active', true)->count();
         $lowStock = Product::where('is_active', true)->where('stock', '<=', 10)->count();
         $outOfStock = Product::where('is_active', true)->where('stock', '<=', 0)->count();
@@ -122,6 +175,11 @@ class InventoryAdminController extends Controller
     {
         return [
             'id' => $m->id,
+            'branch_id' => $m->branch_id,
+            'branch' => $m->branch ? [
+                'id' => $m->branch->id,
+                'name_ar' => $m->branch->name_ar,
+            ] : null,
             'type' => $m->type,
             'reason' => $m->reason,
             'quantity' => (int) $m->quantity,

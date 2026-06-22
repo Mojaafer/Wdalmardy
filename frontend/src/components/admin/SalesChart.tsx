@@ -14,7 +14,7 @@ export default function SalesChart({ data }: { data: { date: string; total: numb
         <h3 className="font-bold text-slate-800">المبيعات خلال 7 أيام</h3>
       </div>
       <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <AreaChart data={formatted}>
             <defs>
               <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">

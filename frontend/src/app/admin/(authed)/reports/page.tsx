@@ -179,7 +179,7 @@ export default function ReportsPage() {
               <div className="text-center text-slate-400 py-12">لا توجد مبيعات في هذه الفترة</div>
             ) : (
               <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <AreaChart data={salesChartData}>
                     <defs>
                       <linearGradient id="reportSalesGrad" x1="0" y1="0" x2="0" y2="1">
@@ -219,7 +219,7 @@ export default function ReportsPage() {
                 <div className="text-center text-slate-400 py-12">لا توجد بيانات</div>
               ) : (
                 <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <BarChart data={data.top_products} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
                       <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} />
@@ -248,7 +248,7 @@ export default function ReportsPage() {
                 <div className="text-center text-slate-400 py-12">لا توجد بيانات</div>
               ) : (
                 <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <PieChart>
                       <Pie
                         data={data.revenue_by_category}

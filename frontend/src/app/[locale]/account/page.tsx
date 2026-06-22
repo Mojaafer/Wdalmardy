@@ -6,7 +6,7 @@ import { useLocale } from 'next-intl';
 import {
   User, Package, MapPin, LogOut, Award, Wallet, TrendingUp,
   Sparkles, Loader2, Plus, Pencil, Trash2, ChevronLeft, ChevronRight,
-  ShoppingBag, Clock,
+  ShoppingBag, Clock, Eye,
 } from 'lucide-react';
 import { useAuth } from '@/lib/customer/useAuth';
 import {
@@ -315,6 +315,13 @@ function OrdersTab({ locale }: { locale: string }) {
               <span>{isAr ? 'الإجمالي' : 'Total'}</span>
               <span>{formatPrice(order.total, locale)} {isAr ? 'ج.س' : 'SDG'}</span>
             </div>
+            <Link
+              href={`/order-tracking/${order.id}`}
+              className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-brand-green hover:text-brand-green-600"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              {isAr ? 'تتبع الطلب' : 'Track order'}
+            </Link>
           </div>
         );
       })}

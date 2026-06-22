@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\BranchProductStock;
 use App\Models\Coupon;
 use App\Models\Customer;
 use App\Models\DeliveryZone;
@@ -13,6 +14,7 @@ use App\Models\Product;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -64,8 +66,28 @@ class OrderController extends Controller
             $subtotal = 0;
             $itemsToCreate = [];
 
+            // Web orders default to the main branch (manual reassignment later).
+            // Guard against overselling by checking the main branch's per-branch
+            // stock, locking those rows for the duration of the transaction.
+            $fulfilmentBranchId = Branch::defaultId();
+            $productIds = collect($validated['items'])->pluck('product_id')->unique()->all();
+            $branchStocks = $fulfilmentBranchId
+                ? BranchProductStock::query()
+                    ->where('branch_id', $fulfilmentBranchId)
+                    ->whereIn('product_id', $productIds)
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('product_id')
+                : collect();
+
             foreach ($validated['items'] as $row) {
                 $product = Product::active()->findOrFail($row['product_id']);
+                $available = (int) ($branchStocks[$product->id]->stock ?? 0);
+                if ($available < (int) $row['quantity']) {
+                    throw ValidationException::withMessages([
+                        'items' => 'الكمية المطلوبة غير متوفرة للمنتج "'.($product->name_ar ?? $product->name_en ?? '').'" (المتاح: '.$available.').',
+                    ]);
+                }
                 $lineTotal = (float) $product->price * (int) $row['quantity'];
                 $subtotal += $lineTotal;
                 $itemsToCreate[] = [

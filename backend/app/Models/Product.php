@@ -53,6 +53,28 @@ class Product extends Model
         return $this->hasMany(ProductImage::class)->orderBy('sort_order');
     }
 
+    public function branchStocks(): HasMany
+    {
+        return $this->hasMany(BranchProductStock::class);
+    }
+
+    /**
+     * Available stock for a specific branch (the per-branch source of truth),
+     * or the aggregate products.stock when no branch is given.
+     */
+    public function stockForBranch(?int $branchId = null): int
+    {
+        if (! $branchId) {
+            return (int) $this->stock;
+        }
+
+        $row = $this->relationLoaded('branchStocks')
+            ? $this->branchStocks->firstWhere('branch_id', $branchId)
+            : BranchProductStock::where('product_id', $this->id)->where('branch_id', $branchId)->first();
+
+        return $row ? (int) $row->stock : 0;
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

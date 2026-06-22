@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -41,8 +41,22 @@ type NavItem = {
   comingSoon?: boolean;
 };
 
-export default function Sidebar({ user }: { user: AdminUser }) {
+export default function Sidebar({ user, className }: { user: AdminUser; className?: string }) {
   const pathname = usePathname();
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api').replace(/\/api\/?$/, '');
+    fetch(`${API_BASE}/api/settings`)
+      .then((r) => r.json())
+      .then((res) => {
+        const url = res.data?.store_logo as string | undefined;
+        if (url) {
+          setLogoUrl(url.startsWith('http') ? url : `${API_BASE}/storage/${url}`);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const items: NavItem[] = useMemo(
     () => [
@@ -82,13 +96,19 @@ export default function Sidebar({ user }: { user: AdminUser }) {
   const visible = items.filter((it) => can(it.permission));
 
   return (
-    <aside className="hidden lg:flex w-64 bg-white border-l border-slate-200 flex-col h-screen sticky top-0 overflow-y-auto">
+    <aside className={`w-64 bg-white border-l border-slate-200 flex-col h-screen sticky top-0 overflow-y-auto ${className ?? 'hidden lg:flex'}`}>
       <Link href="/admin" className="px-5 py-5 border-b border-slate-200 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#0E5C3A] text-white grid place-items-center font-extrabold">
-          ود
-        </div>
+        {logoUrl ? (
+          <img src={logoUrl} alt="ود المرضي" className="h-10 w-auto object-contain" />
+        ) : (
+          <div className="w-10 h-10 rounded-xl bg-[#0E5C3A] text-white grid place-items-center font-extrabold">
+            ود
+          </div>
+        )}
         <div>
-          <div className="font-extrabold text-[#0E5C3A]">ود المرضي</div>
+          <div className="font-extrabold text-[#0E5C3A]">
+            {logoUrl ? '' : 'ود المرضي'}
+          </div>
           <div className="text-[11px] text-slate-500">لوحة التحكم</div>
         </div>
       </Link>

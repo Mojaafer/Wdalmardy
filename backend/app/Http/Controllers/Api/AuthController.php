@@ -195,4 +195,25 @@ class AuthController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Single order detail for the authenticated customer. 404s when the
+     * order belongs to someone else so customers can't enumerate orders
+     * by integer id.
+     */
+    public function showOrder(Request $request, int $orderId)
+    {
+        /** @var Customer $customer */
+        $customer = $request->user();
+
+        $order = Order::with(['items', 'driver:id,name,phone'])
+            ->where('customer_id', $customer->id)
+            ->find($orderId);
+
+        if (! $order) {
+            return response()->json(['message' => 'الطلب غير موجود.'], 404);
+        }
+
+        return response()->json(['data' => $order]);
+    }
 }

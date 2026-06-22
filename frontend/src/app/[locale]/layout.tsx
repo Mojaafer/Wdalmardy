@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Cairo, Inter } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -9,9 +8,6 @@ import { TrustStrip } from '@/components/TrustStrip';
 import { Footer } from '@/components/Footer';
 import { AuthProvider } from '@/lib/customer/useAuth';
 import '../globals.css';
-
-const cairo = Cairo({ subsets: ['arabic', 'latin'], variable: '--font-cairo', display: 'swap' });
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'Wad Almardi Market | ود المرضي ماركت',
@@ -35,26 +31,31 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
   const messages = await getMessages();
   const dir = locale === 'ar' ? 'rtl' : 'ltr';
-  const fontVar = locale === 'ar' ? cairo.variable : inter.variable;
 
   return (
-    <html lang={locale} dir={dir} className={`${fontVar}`}>
-      <body
-        className="min-h-screen bg-white text-brand-ink"
-        style={{
-          ['--font-app' as string]: locale === 'ar' ? 'var(--font-cairo)' : 'var(--font-inter)',
-          fontFamily: 'var(--font-app), system-ui, sans-serif',
+    <>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `document.documentElement.lang="${locale}";document.documentElement.dir="${dir}"`,
         }}
-      >
-        <NextIntlClientProvider messages={messages} locale={locale}>
-          <AuthProvider>
+      />
+      <NextIntlClientProvider messages={messages} locale={locale}>
+        <AuthProvider>
+          <div
+            className="min-h-screen bg-white text-brand-ink"
+            style={{
+              ['--font-app' as string]:
+                locale === 'ar' ? 'var(--font-cairo)' : 'var(--font-inter)',
+              fontFamily: 'var(--font-app), system-ui, sans-serif',
+            }}
+          >
             <Header />
             <TrustStrip />
-            <main>{children}</main>
+            <main className="grow">{children}</main>
             <Footer />
-          </AuthProvider>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+          </div>
+        </AuthProvider>
+      </NextIntlClientProvider>
+    </>
   );
 }

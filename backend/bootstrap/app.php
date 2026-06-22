@@ -22,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'customer' => EnsureCustomerMiddleware::class,
         ]);
+
+        // API-wide throttle to keep abusive clients from exhausting MySQL.
+        // Per-route, tighter limits are applied via ->middleware('throttle:…').
+        $middleware->throttleApi();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\BranchProductStock;
 use App\Models\Customer;
 use App\Models\EmployeeActivity;
 use App\Models\Order;
@@ -88,6 +89,15 @@ class PosSaleAdminController extends Controller
             $productIds = collect($data['items'])->pluck('product_id')->unique()->all();
             $products = Product::whereIn('id', $productIds)->lockForUpdate()->get()->keyBy('id');
 
+            // Per-branch stock is the source of truth. Lock the branch rows so
+            // concurrent sales at the same branch can't oversell.
+            $branchStocks = BranchProductStock::query()
+                ->where('branch_id', $session->branch_id)
+                ->whereIn('product_id', $productIds)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('product_id');
+
             $subtotal = 0.0;
             $itemRows = [];
             foreach ($data['items'] as $line) {
@@ -95,9 +105,10 @@ class PosSaleAdminController extends Controller
                 if (! $product) {
                     throw ValidationException::withMessages(['items' => 'المنتج غير موجود.']);
                 }
-                if ((int) $product->stock < (int) $line['quantity']) {
+                $available = (int) ($branchStocks[$product->id]->stock ?? 0);
+                if ($available < (int) $line['quantity']) {
                     throw ValidationException::withMessages([
-                        'items' => 'الكمية المطلوبة غير متوفرة للمنتج "'.($product->name_ar ?? $product->name_en ?? '').'" (المتاح: '.$product->stock.').',
+                        'items' => 'الكمية المطلوبة غير متوفرة للمنتج "'.($product->name_ar ?? $product->name_en ?? '').'" في هذا الفرع (المتاح: '.$available.').',
                     ]);
                 }
                 $unit = (float) $product->price;
@@ -255,6 +266,9 @@ class PosSaleAdminController extends Controller
         $q = trim($request->string('q')->toString());
         $categoryId = $request->integer('category_id') ?: null;
         $limit = min(60, max(12, (int) $request->integer('limit', 30)));
+        // When a branch is in context (the active POS session's branch), the
+        // picker must show that branch's stock, not the global aggregate.
+        $branchId = $request->integer('branch_id') ?: null;
 
         $products = Product::query()
             ->where('is_active', true)
@@ -274,18 +288,29 @@ class PosSaleAdminController extends Controller
             ->limit($limit)
             ->get(['id', 'category_id', 'slug', 'name_ar', 'name_en', 'barcode', 'image', 'price', 'stock', 'is_featured']);
 
+        $branchStockMap = [];
+        if ($branchId && $products->isNotEmpty()) {
+            $branchStockMap = BranchProductStock::query()
+                ->where('branch_id', $branchId)
+                ->whereIn('product_id', $products->pluck('id'))
+                ->pluck('stock', 'product_id')
+                ->all();
+        }
+
         return response()->json([
-            'data' => $products->map(fn (Product $p) => [
-                'id' => $p->id,
-                'slug' => $p->slug,
-                'category_id' => $p->category_id,
-                'name' => ['ar' => $p->name_ar, 'en' => $p->name_en],
-                'barcode' => $p->barcode,
-                'image' => $p->image,
-                'price' => (float) $p->price,
-                'stock' => (int) $p->stock,
-                'is_featured' => (bool) $p->is_featured,
-            ]),
+            'data' => $products->map(function (Product $p) use ($branchStockMap) {
+                return [
+                    'id' => $p->id,
+                    'slug' => $p->slug,
+                    'category_id' => $p->category_id,
+                    'name' => ['ar' => $p->name_ar, 'en' => $p->name_en],
+                    'barcode' => $p->barcode,
+                    'image' => $p->image,
+                    'price' => (float) $p->price,
+                    'stock' => isset($branchStockMap[$p->id]) ? (int) $branchStockMap[$p->id] : (int) $p->stock,
+                    'is_featured' => (bool) $p->is_featured,
+                ];
+            }),
         ]);
     }
 

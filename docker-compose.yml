@@ -18,8 +18,52 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wdalmardy-backend
+    restart: unless-stopped
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_KEY: base64:1Y5JlT4UsA8YCvL6U0E7VAOABlAo+J8zftPngKSAWYY=
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: wdalmardy
+      DB_USERNAME: wdalmardy
+      DB_PASSWORD: wdalmardy
+      FRONTEND_URL: http://localhost:3000
+      WA_PHONE_NUMBER: "249123456789"
+      SESSION_DRIVER: database
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+    ports:
+      - "8000:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: wdalmardy-frontend
+    restart: unless-stopped
+    environment:
+      API_URL: http://backend:80/api
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+      NEXT_PUBLIC_WA_PHONE: "249123456789"
+      NEXT_PUBLIC_CURRENCY: "ج.س"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
   phpmyadmin:
-    image: phpmyadmin:5
+    image: phpmyadmin:latest
     container_name: wdalmardy-phpmyadmin
     restart: unless-stopped
     environment:

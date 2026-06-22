@@ -71,6 +71,7 @@ class SettingAdminController extends Controller
             ['key' => 'store_address', 'type' => 'string', 'group' => 'brand', 'label' => 'العنوان'],
             ['key' => 'currency_code', 'type' => 'string', 'group' => 'brand', 'label' => 'رمز العملة (ISO)'],
             ['key' => 'currency_symbol', 'type' => 'string', 'group' => 'brand', 'label' => 'رمز العملة المعروض'],
+            ['key' => 'store_logo', 'type' => 'string', 'group' => 'brand', 'label' => 'شعار المتجر'],
             ['key' => 'hero_image', 'type' => 'string', 'group' => 'brand', 'label' => 'صورة الهيرو (الرئيسية)'],
             // delivery
             ['key' => 'default_delivery_fee', 'type' => 'integer', 'group' => 'delivery', 'label' => 'رسوم التوصيل الافتراضية (ج.س)'],
@@ -101,12 +102,12 @@ class SettingAdminController extends Controller
     public function uploadHeroImage(Request $request)
     {
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,webp|max:2048',
+            'image' => 'required|image|mimes:jpeg,png,webp|max:5120',
         ]);
 
         $file = $request->file('image');
         $filename = 'hero_'.time().'.'.$file->extension();
-        $file->storeAs('public/hero', $filename);
+        $file->storeAs('hero', $filename, 'public');
 
         $path = 'hero/'.$filename;
         Setting::set('hero_image', $path, 'string', 'brand');
@@ -127,6 +128,40 @@ class SettingAdminController extends Controller
         if ($current) {
             Storage::disk('public')->delete($current);
             Setting::set('hero_image', null, 'string', 'brand');
+        }
+
+        return response()->json(['data' => ['ok' => true]]);
+    }
+
+    public function uploadLogo(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,webp|max:5120',
+        ]);
+
+        $file = $request->file('image');
+        $filename = 'logo_'.time().'.'.$file->extension();
+        $file->storeAs('logo', $filename, 'public');
+
+        $path = 'logo/'.$filename;
+        Setting::set('store_logo', $path, 'string', 'brand');
+
+        return response()->json([
+            'data' => [
+                'value' => $path,
+                'type' => 'string',
+                'group' => 'brand',
+                'url' => config('app.url').'/storage/'.$path,
+            ],
+        ]);
+    }
+
+    public function deleteLogo()
+    {
+        $current = Setting::get('store_logo');
+        if ($current) {
+            Storage::disk('public')->delete($current);
+            Setting::set('store_logo', null, 'string', 'brand');
         }
 
         return response()->json(['data' => ['ok' => true]]);

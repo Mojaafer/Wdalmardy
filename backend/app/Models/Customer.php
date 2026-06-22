@@ -96,10 +96,15 @@ class Customer extends Model
                 ->where('id', $this->id)
                 ->update($update);
         } else {
+            // MySQL has GREATEST(); SQLite uses MAX(). The MAX(0, expr) form
+            // works on both engines so the atomic clamp-at-zero UPDATE can
+            // run identically on dev (sqlite) and production (mysql).
+            $driver = DB::connection()->getDriverName();
+            $fn = $driver === 'sqlite' ? 'MAX' : 'GREATEST';
             DB::table('customers')
                 ->where('id', $this->id)
                 ->update([
-                    'loyalty_points' => DB::raw('GREATEST(0, loyalty_points + ('.(int) $points.'))'),
+                    'loyalty_points' => DB::raw("$fn(0, loyalty_points + (".(int) $points.'))'),
                     'updated_at' => now(),
                 ]);
         }

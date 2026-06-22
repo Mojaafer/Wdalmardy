@@ -54,11 +54,40 @@ else
 fi
 rm -f "$SQL_SETUP"
 
+# Ensure app storage subdirectories on the persistent volume (MySQL volume)
+# We share the single volume by storing app uploads under /var/lib/mysql/_storage/
+mkdir -p /var/lib/mysql/_storage/app/public/products
+mkdir -p /var/lib/mysql/_storage/app/public/offers
+mkdir -p /var/lib/mysql/_storage/app/public/categories
+mkdir -p /var/lib/mysql/_storage/app/public/suppliers
+mkdir -p /var/lib/mysql/_storage/app/public/hero
+mkdir -p /var/lib/mysql/_storage/app/public/logo
+mkdir -p /var/lib/mysql/_storage/framework/sessions /var/lib/mysql/_storage/framework/views /var/lib/mysql/_storage/framework/cache/data
+mkdir -p /var/lib/mysql/_storage/framework/testing
+mkdir -p /var/lib/mysql/_storage/logs
+
+# Symlink /app/storage -> volume-backed directory
+rm -rf /app/storage
+ln -sf /var/lib/mysql/_storage /app/storage
+chmod -R 775 /var/lib/mysql/_storage
+chown -R www-data:www-data /var/lib/mysql/_storage 2>/dev/null || true
+
 # Create storage symlink
 php artisan storage:link --force 2>/dev/null || true
 
-# Run migrations and seeders (DB_HOST is 127.0.0.1 via env var)
-php artisan migrate --seed --force
+# Clear stale caches (may create root-owned dirs)
+php artisan optimize:clear 2>/dev/null || true
+
+# Ensure storage is writable by www-data (fixes root-owned cache dirs)
+chmod -R 775 /app/storage /app/bootstrap/cache
+chown -R www-data:www-data /app/storage /app/bootstrap/cache 2>/dev/null || true
+
+# Run migrations only (do NOT seed — seeding wipes production data)
+php artisan migrate --force
+
+# Migrate and seed may create new cache dirs as root (Spatie permission cache etc.)
+chmod -R 775 /app/storage /app/bootstrap/cache
+chown -R www-data:www-data /app/storage /app/bootstrap/cache 2>/dev/null || true
 
 # Start supervisord (php-fpm + nginx)
 # MariaDB continues running in background via its own PID

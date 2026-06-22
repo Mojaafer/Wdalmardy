@@ -16,6 +16,8 @@ import {
 import { getPosZReport, type PosZReport } from '@/lib/admin/api';
 import { fmtSDG } from '@/lib/admin/format';
 
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api').replace(/\/api\/?$/, '');
+
 const METHOD_LABELS: Record<string, { label: string; cls: string }> = {
   cash: { label: 'نقدي', cls: 'text-emerald-700' },
   mobile_money: { label: 'محفظة إلكترونية', cls: 'text-sky-700' },
@@ -33,6 +35,19 @@ export default function PosZReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/settings`)
+      .then((r) => r.json())
+      .then((res) => {
+        const url = res.data?.store_logo as string | undefined;
+        if (url) {
+          setLogoUrl(url.startsWith('http') ? url : `${API_BASE}/storage/${url}`);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -86,7 +101,11 @@ export default function PosZReportPage() {
       ) : (
         <div className="space-y-6">
           <div className="text-center print:block hidden">
-            <h2 className="text-xl font-extrabold">ود المرضي ماركت — تقرير Z</h2>
+            {logoUrl ? (
+              <img src={logoUrl} alt="ود المرضي ماركت" className="h-12 w-auto object-contain mx-auto mb-2" />
+            ) : (
+              <h2 className="text-xl font-extrabold">ود المرضي ماركت — تقرير Z</h2>
+            )}
             <p className="text-sm text-slate-600">{report.date}</p>
           </div>
 

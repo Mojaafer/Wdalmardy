@@ -17,6 +17,7 @@ class SettingController extends Controller
         $publicKeys = [
             'store_name', 'store_tagline', 'store_email', 'store_phone',
             'store_whatsapp', 'store_address', 'currency_code', 'currency_symbol',
+            'store_logo',
             'maintenance_mode', 'maintenance_message',
             'free_delivery_threshold',
             'payment_cod_enabled', 'payment_bank_enabled', 'payment_bank_details',

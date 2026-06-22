@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
+use App\Models\Branch;
+use App\Models\BranchProductStock;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -14,7 +16,14 @@ class ProductAdminController extends Controller
 {
     public function index(Request $request)
     {
+        $branchId = $request->integer('branch_id') ?: null;
         $query = Product::query()->with('category');
+
+        // Eager-load the branch rows so ProductResource can expose per-branch
+        // availability without N+1 queries.
+        if ($branchId) {
+            $query->with(['branchStocks' => fn ($q) => $q->where('branch_id', $branchId)]);
+        }
 
         if ($barcode = $request->string('barcode')->toString()) {
             $query->where('barcode', $barcode);
@@ -34,13 +43,29 @@ class ProductAdminController extends Controller
         }
 
         if (($status = $request->string('status')->toString()) !== '') {
-            match ($status) {
-                'in_stock' => $query->where('stock', '>=', 10)->where('is_active', true),
-                'low_stock' => $query->where('stock', '<', 10)->where('stock', '>', 0),
-                'out_of_stock' => $query->where('stock', 0),
-                'inactive' => $query->where('is_active', false),
-                default => null,
-            };
+            if ($branchId && in_array($status, ['in_stock', 'low_stock', 'out_of_stock'], true)) {
+                // Filter against the per-branch row via a whereHas.
+                $query->whereHas('branchStocks', function ($bs) use ($branchId, $status) {
+                    $bs->where('branch_id', $branchId);
+                    match ($status) {
+                        'in_stock' => $bs->where('stock', '>=', 10),
+                        'low_stock' => $bs->where('stock', '<', 10)->where('stock', '>', 0),
+                        'out_of_stock' => $bs->where('stock', 0),
+                        default => null,
+                    };
+                });
+                if ($status === 'in_stock') {
+                    $query->where('is_active', true);
+                }
+            } else {
+                match ($status) {
+                    'in_stock' => $query->where('stock', '>=', 10)->where('is_active', true),
+                    'low_stock' => $query->where('stock', '<', 10)->where('stock', '>', 0),
+                    'out_of_stock' => $query->where('stock', 0),
+                    'inactive' => $query->where('is_active', false),
+                    default => null,
+                };
+            }
         }
 
         $perPage = (int) $request->integer('per_page', 15);
@@ -68,6 +93,20 @@ class ProductAdminController extends Controller
         $data['slug'] = $this->uniqueSlug($data['slug'] ?? $data['name_en'] ?? $data['name_ar']);
 
         $product = Product::create($data);
+
+        // Seed a per-branch stock row at the main branch for the new product so
+        // it doesn't appear out-of-stock everywhere (the initial `stock` value
+        // from the create form is assigned to the main branch).
+        $mainBranchId = Branch::defaultId();
+        if ($mainBranchId) {
+            BranchProductStock::create([
+                'branch_id' => $mainBranchId,
+                'product_id' => $product->id,
+                'stock' => (int) $data['stock'],
+                'reserved_stock' => 0,
+                'low_stock_threshold' => 10,
+            ]);
+        }
 
         return response()->json(['data' => new ProductResource($product->load('category'))], 201);
     }

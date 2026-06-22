@@ -7,6 +7,8 @@ import { Printer, ChevronLeft, XCircle, CheckCircle2, Trash } from 'lucide-react
 import { getPosSale, voidPosSale, type PosSale } from '@/lib/admin/api';
 import { fmtSDG, fmtDate } from '@/lib/admin/format';
 
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api').replace(/\/api\/?$/, '');
+
 const METHOD_LABELS: Record<string, string> = {
   cash: 'نقدي',
   mobile_money: 'محفظة إلكترونية',
@@ -19,6 +21,19 @@ export default function PosSaleDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [voiding, setVoiding] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/settings`)
+      .then((r) => r.json())
+      .then((res) => {
+        const url = res.data?.store_logo as string | undefined;
+        if (url) {
+          setLogoUrl(url.startsWith('http') ? url : `${API_BASE}/storage/${url}`);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -94,7 +109,11 @@ export default function PosSaleDetailPage() {
 
       <article className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 print:shadow-none print:border-0">
         <div className="text-center mb-4 pb-4 border-b border-dashed border-slate-300">
-          <h2 className="text-xl font-extrabold text-[#0E5C3A]">ود المرضي ماركت</h2>
+          {logoUrl ? (
+            <img src={logoUrl} alt="ود المرضي ماركت" className="h-24 w-auto object-contain mx-auto mb-2" />
+          ) : (
+            <h2 className="text-xl font-extrabold text-[#0E5C3A]">ود المرضي ماركت</h2>
+          )}
           <p className="text-xs text-slate-500">إيصال بيع نقطة البيع</p>
         </div>
 

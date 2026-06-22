@@ -13,6 +13,7 @@ const config: Config = {
       screens: { xl: '1240px' },
     },
     extend: {
+      screens: { xs: '375px' },
       colors: {
         brand: {
           green: {

@@ -138,3 +138,22 @@ export async function getOrders(page = 1) {
     meta: { current_page: number; last_page: number; total: number };
   }>(`/auth/orders?page=${page}`);
 }
+
+export type CustomerOrderDetail = CustomerOrder & {
+  notes: string | null;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string | null;
+  address_state: string | null;
+  address_district: string | null;
+  address_details: string | null;
+  discount_amount: number;
+  points_redeemed: number;
+  points_discount: number;
+  coupon_code: string | null;
+  driver: { id: number; name: string; phone: string | null } | null;
+};
+
+export async function getOrder(orderId: number) {
+  return request<{ data: CustomerOrderDetail }>(`/auth/orders/${orderId}`);
+}
