@@ -46,8 +46,14 @@ trait Auditable
             $oldValues = $this->getAttributes();
         }
 
+        try {
+            $userId = auth()->id();
+        } catch (\Throwable) {
+            $userId = null;
+        }
+
         AuditLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => $userId,
             'event' => $event,
             'auditable_type' => static::class,
             'auditable_id' => $this->getKey(),

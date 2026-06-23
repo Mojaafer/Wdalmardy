@@ -132,6 +132,89 @@ class ReportsAdminController extends Controller
         ]);
     }
 
+    public function exportSales(Request $request)
+    {
+        $range = $request->string('range', '30d')->toString();
+        [$from, $to] = $this->resolveRange($range);
+
+        $orders = Order::whereBetween('created_at', [$from, $to])
+            ->where('status', '!=', 'cancelled')
+            ->with('customer:id,name_ar,phone')
+            ->orderBy('created_at')
+            ->get();
+
+        $filename = "sales-report-{$from->format('Y-m-d')}-to-{$to->format('Y-m-d')}.csv";
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $columns = ['رقم الطلب', 'التاريخ', 'العميل', 'الهاتف', 'المجموع', 'الخصم', 'الصافي', 'الحالة'];
+
+        $callback = function () use ($orders, $columns) {
+            $file = fopen('php://output', 'wb');
+            fwrite($file, "\xEF\xBB\xBF");
+            fputcsv($file, $columns);
+
+            foreach ($orders as $order) {
+                fputcsv($file, [
+                    $order->id,
+                    $order->created_at->format('Y-m-d H:i'),
+                    $order->customer?->name_ar ?? '—',
+                    $order->customer?->phone ?? '—',
+                    number_format($order->total, 2),
+                    number_format($order->discount_amount ?? 0, 2),
+                    number_format($order->total - ($order->discount_amount ?? 0), 2),
+                    __('order.status.'.$order->status),
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function exportProducts(Request $request)
+    {
+        $products = Product::active()
+            ->with('category:id,name_ar')
+            ->orderBy('name_ar')
+            ->get();
+
+        $filename = 'products-export-'.now()->format('Y-m-d').'.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $columns = ['#', 'الاسم', 'الاسم (إنجليزي)', 'التصنيف', 'السعر', 'المخزون', 'slug'];
+
+        $callback = function () use ($products, $columns) {
+            $file = fopen('php://output', 'wb');
+            fwrite($file, "\xEF\xBB\xBF");
+            fputcsv($file, $columns);
+
+            foreach ($products as $i => $p) {
+                fputcsv($file, [
+                    $i + 1,
+                    $p->name_ar,
+                    $p->name_en,
+                    $p->category?->name_ar ?? '—',
+                    number_format($p->price, 2),
+                    $p->stock,
+                    $p->slug,
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     private function resolveRange(string $range): array
     {
         $to = Carbon::now()->endOfDay();

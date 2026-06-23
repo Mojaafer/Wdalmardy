@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState, FormEvent } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { Star, Loader2, User } from 'lucide-react';
 import { getProductReviews, submitReview, type Review } from '@/lib/api';
 import { getToken } from '@/lib/customer/auth';
 
-function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+export function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
     <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map((star) => (
@@ -25,7 +25,6 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
 export function ProductReviews({ productId }: { productId: number }) {
   const locale = useLocale();
   const isAr = locale === 'ar';
-  const t = useTranslations();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(0);

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin\AuditLogAdminController;
 use App\Http\Controllers\Api\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\Api\Admin\BackupAdminController;
 use App\Http\Controllers\Api\Admin\BarcodeAdminController;
 use App\Http\Controllers\Api\Admin\BranchAdminController;
 use App\Http\Controllers\Api\Admin\CategoryAdminController;
@@ -276,6 +277,8 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
 
     Route::middleware('permission:reports.view')->group(function () {
         Route::get('/reports/summary', [ReportsAdminController::class, 'summary']);
+        Route::get('/reports/export/sales', [ReportsAdminController::class, 'exportSales']);
+        Route::get('/reports/export/products', [ReportsAdminController::class, 'exportProducts']);
     });
 
     // Expenses
@@ -382,6 +385,14 @@ Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
         Route::get('/pos/sessions/{session}', [PosSessionAdminController::class, 'show']);
         Route::get('/pos/z-report', [PosSessionAdminController::class, 'zReport']);
         Route::post('/pos/sales/{sale}/void', [PosSaleAdminController::class, 'void']);
+    });
+
+    // Backup / Restore
+    Route::middleware('permission:settings.manage')->group(function () {
+        Route::get('/backups', [BackupAdminController::class, 'index']);
+        Route::post('/backups', [BackupAdminController::class, 'create']);
+        Route::get('/backups/{filename}/download', [BackupAdminController::class, 'download']);
+        Route::delete('/backups/{filename}', [BackupAdminController::class, 'destroy']);
     });
 
     // Notifications: any authenticated admin can read their own

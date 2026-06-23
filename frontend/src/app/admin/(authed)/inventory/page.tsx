@@ -13,6 +13,7 @@ import {
   AdminApiError,
 } from '@/lib/admin/api';
 import { fmtNumber, fmtSDG } from '@/lib/admin/format';
+import { useBranchContext } from '@/lib/admin/branchContext';
 import PageHeader from '@/components/admin/PageHeader';
 import StatCard from '@/components/admin/StatCard';
 import Drawer from '@/components/admin/Drawer';
@@ -46,6 +47,7 @@ const REASON_LABELS: Record<string, string> = {
 };
 
 export default function AdminInventoryPage() {
+  const { currentBranchId, branches } = useBranchContext();
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [lowStock, setLowStock] = useState<LowStockProduct[]>([]);
   const [stats, setStats] = useState<InventoryStats>({ total_products: 0, low_stock: 0, out_of_stock: 0, total_stock_units: 0 });
@@ -54,7 +56,12 @@ export default function AdminInventoryPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   async function refresh() {
-    const [m, l] = await Promise.all([listStockMovements({ q: filters.q, type: filters.type }), listLowStock(10)]);
+    const params: Record<string, string | number> = { q: filters.q, type: filters.type };
+    if (currentBranchId) params.branch_id = currentBranchId;
+    const [m, l] = await Promise.all([
+      listStockMovements(params),
+      listLowStock(10, currentBranchId ?? undefined),
+    ]);
     setMovements(m.data);
     setStats(m.stats);
     setLowStock(l.data);
@@ -63,7 +70,7 @@ export default function AdminInventoryPage() {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.q, filters.type]);
+  }, [filters.q, filters.type, currentBranchId]);
 
   async function openAdjust() {
     if (products.length === 0) {
@@ -72,6 +79,8 @@ export default function AdminInventoryPage() {
     }
     setDrawerOpen(true);
   }
+
+  const activeBranch = branches.find((b) => b.id === currentBranchId);
 
   return (
     <div className="space-y-4">

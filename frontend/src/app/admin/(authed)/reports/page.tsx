@@ -16,9 +16,11 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { BarChart3, ShoppingCart, Users, Wallet, TrendingUp, Percent } from 'lucide-react';
+import { BarChart3, ShoppingCart, Users, Wallet, TrendingUp, Percent, Download } from 'lucide-react';
 import {
   getReportSummary,
+  exportSalesReport,
+  exportProductsCsv,
   type ReportRange,
   type ReportSummary,
 } from '@/lib/admin/api';
@@ -116,6 +118,22 @@ export default function ReportsPage() {
               {r.label}
             </button>
           ))}
+        </div>
+        <div className="flex gap-2">
+          <a
+            href={exportSalesReport(range)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            تصدير المبيعات
+          </a>
+          <a
+            href={exportProductsCsv()}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            تصدير المنتجات
+          </a>
         </div>
       </header>
 

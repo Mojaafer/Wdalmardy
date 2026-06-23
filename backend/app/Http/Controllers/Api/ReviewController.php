@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
-use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 

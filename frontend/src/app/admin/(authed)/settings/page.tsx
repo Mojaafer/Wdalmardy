@@ -253,10 +253,10 @@ export default function SettingsPage() {
                   {backups.length === 0 ? (
                     <div className="text-center text-slate-400 text-sm py-6">لا توجد نسخ محفوظة بعد</div>
                   ) : backups.slice(0, 8).map((file) => (
-                    <div key={file.filename} className="px-3 py-2 flex items-center justify-between gap-3 text-sm">
+                    <div key={file.name} className="px-3 py-2 flex items-center justify-between gap-3 text-sm">
                       <div>
-                        <div className="font-mono text-slate-800" dir="ltr">{file.filename}</div>
-                        <div className="text-xs text-slate-500">{new Date(file.created_at).toLocaleString('ar-SD')}</div>
+                        <div className="font-mono text-slate-800" dir="ltr">{file.name}</div>
+                        <div className="text-xs text-slate-500">{new Date(file.last_modified * 1000).toLocaleString('ar-SD')}</div>
                       </div>
                       <span className="text-xs text-slate-500" dir="ltr">{Math.ceil(file.size / 1024)} KB</span>
                     </div>

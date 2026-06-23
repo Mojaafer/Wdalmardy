@@ -541,9 +541,11 @@ export const listStockMovements = (params: Record<string, string | number> = {})
   );
 };
 export type LowStockProduct = { id: number; slug: string; name_ar: string; name_en: string; stock: number; price: number; unit_ar: string | null };
-export const listLowStock = (threshold = 10) =>
-  request<{ data: LowStockProduct[]; threshold: number }>(`/admin/inventory/low-stock?threshold=${threshold}`);
-export const adjustStock = (body: { product_id: number; type: 'in' | 'out' | 'adjustment'; reason: string; quantity: number; notes?: string }) =>
+export const listLowStock = (threshold = 10, branchId?: number) =>
+  request<{ data: LowStockProduct[]; threshold: number }>(
+    `/admin/inventory/low-stock?threshold=${threshold}${branchId ? `&branch_id=${branchId}` : ''}`,
+  );
+export const adjustStock = (body: { product_id: number; type: 'in' | 'out' | 'adjustment'; reason: string; quantity: number; branch_id?: number; notes?: string }) =>
   request<{ data: StockMovement }>('/admin/inventory/adjust', { method: 'POST', body: JSON.stringify(body) });
 
 export type InventoryAuditItem = {
@@ -843,14 +845,20 @@ export async function downloadBackup(filename: string) {
   URL.revokeObjectURL(url);
 }
 export type BackupFile = {
-  filename: string;
-  path: string;
+  name: string;
   size: number;
-  created_at: string;
+  last_modified: number;
 };
-export const listBackups = () => request<{ data: BackupFile[] }>('/admin/settings/backups');
+
+export const listBackups = () => request<{ data: BackupFile[] }>('/admin/backups');
 export const runBackup = () =>
-  request<{ data: BackupFile }>('/admin/settings/backup?store=1');
+  request<{ message: string; data: BackupFile }>('/admin/backups', { method: 'POST' });
+
+export const getBackupDownloadUrl = (filename: string) =>
+  `${API_URL}/admin/backups/${encodeURIComponent(filename)}/download?token=${getToken()}`;
+
+export const deleteBackup = (filename: string) =>
+  request<{ message: string }>(`/admin/backups/${encodeURIComponent(filename)}`, { method: 'DELETE' });
 
 // Audit Log
 export type AuditLogItem = {
@@ -923,6 +931,12 @@ export type ReportSummary = {
 };
 export const getReportSummary = (range: ReportRange = '30d') =>
   request<{ data: ReportSummary }>(`/admin/reports/summary?range=${range}`);
+
+export const exportSalesReport = (range: ReportRange = '30d') =>
+  `${API_URL}/admin/reports/export/sales?range=${range}&token=${getToken()}`;
+
+export const exportProductsCsv = () =>
+  `${API_URL}/admin/reports/export/products?token=${getToken()}`;
 
 // Notifications
 export type AdminNotificationItem = {
