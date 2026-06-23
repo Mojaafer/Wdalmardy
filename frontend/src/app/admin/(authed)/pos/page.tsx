@@ -1,21 +1,26 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Banknote,
+  Bluetooth,
+  CloudOff,
   CreditCard,
   History,
   Minus,
   Plus,
   Printer,
   RefreshCcw,
+  RefreshCw,
   RotateCcw,
   Search,
   ShoppingCart,
   Smartphone,
   Trash2,
+  Upload,
   User,
+  Wifi,
   X,
 } from 'lucide-react';
 import { ProductImage } from '@/components/ProductImage';
@@ -32,6 +37,18 @@ import {
   type PosSale,
 } from '@/lib/admin/api';
 import { fmtSDG } from '@/lib/admin/format';
+import {
+  cacheProducts,
+  cacheCategories,
+  getCachedProducts,
+  getCachedCategories,
+  queueSale,
+  getPendingSales,
+  markSynced,
+  pendingCount,
+  clearSynced,
+} from '@/lib/pos/offline';
+import { generateReceipt, printBluetooth } from '@/lib/pos/printer';
 
 type CartLine = {
   product_id: number;
@@ -69,6 +86,64 @@ export default function PosPage() {
   const [lastSale, setLastSale] = useState<PosSale | null>(null);
   const [recentSales, setRecentSales] = useState<PosSale[]>([]);
 
+  const [isOnline, setIsOnline] = useState(true);
+  const [offlinePending, setOfflinePending] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [printing, setPrinting] = useState(false);
+
+  const refreshPendingCount = useCallback(async () => {
+    const count = await pendingCount();
+    setOfflinePending(count);
+  }, []);
+
+  useEffect(() => {
+    const swUrl = '/sw.js';
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register(swUrl).catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', handler);
+    window.addEventListener('offline', handler);
+    setIsOnline(navigator.onLine);
+    return () => {
+      window.removeEventListener('online', handler);
+      window.removeEventListener('offline', handler);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOnline) {
+      refreshPendingCount();
+    }
+  }, [isOnline, refreshPendingCount]);
+
+  const syncPendingSales = useCallback(async () => {
+    const pending = await getPendingSales();
+    if (pending.length === 0) return;
+    setSyncing(true);
+    setError(null);
+    for (const sale of pending) {
+      try {
+        await createPosSale(sale.body);
+        await markSynced(sale.id!);
+      } catch {
+        break;
+      }
+    }
+    await clearSynced();
+    await refreshPendingCount();
+    setSyncing(false);
+  }, [refreshPendingCount]);
+
+  useEffect(() => {
+    if (isOnline) {
+      syncPendingSales();
+    }
+  }, [isOnline, syncPendingSales]);
+
   useEffect(() => {
     fetch(`${API_BASE}/api/settings`)
       .then((r) => r.json())
@@ -80,7 +155,14 @@ export default function PosPage() {
       })
       .catch(() => {});
     initSession();
-    listCategories().then((r) => setCategories(r.data)).catch(() => setCategories([]));
+    listCategories()
+      .then((r) => {
+        setCategories(r.data);
+        cacheCategories(r.data);
+      })
+      .catch(() => {
+        getCachedCategories().then(setCategories);
+      });
     refreshRecentSales();
   }, []);
 
@@ -103,7 +185,13 @@ export default function PosPage() {
         setSessionId(created.data.id);
       }
     } catch {
-      setError('تعذر فتح جلسة البيع');
+      const cached = await getCachedProducts();
+      if (cached.length > 0) {
+        setSessionId(0);
+        setError('نمط غير متصل — المبيعات ستدرج في قائمة الانتظار');
+      } else {
+        setError('تعذر فتح جلسة البيع');
+      }
     } finally {
       setLoading(false);
     }
@@ -116,16 +204,33 @@ export default function PosPage() {
   useEffect(() => {
     setSearching(true);
     const timer = setTimeout(() => {
-      searchPosProducts(q.trim(), {
-        category_id: activeCategory === 'all' ? undefined : activeCategory,
-        limit: 36,
-      })
-        .then((r) => setProducts(r.data))
-        .catch(() => setProducts([]))
-        .finally(() => setSearching(false));
+      if (isOnline) {
+        searchPosProducts(q.trim(), {
+          category_id: activeCategory === 'all' ? undefined : activeCategory,
+          limit: 36,
+        })
+          .then((r) => {
+            setProducts(r.data);
+            cacheProducts(r.data);
+          })
+          .catch(() => {
+            getCachedProducts().then(setProducts);
+          })
+          .finally(() => setSearching(false));
+      } else {
+        getCachedProducts().then((cached) => {
+          const filtered = cached.filter((p) => {
+            if (activeCategory !== 'all' && String(p.category_id) !== activeCategory) return false;
+            if (!q) return true;
+            const name = `${p.name.ar} ${p.name.en} ${p.barcode ?? ''} ${p.slug ?? ''}`.toLowerCase();
+            return name.includes(q.toLowerCase());
+          });
+          setProducts(filtered);
+        }).finally(() => setSearching(false));
+      }
     }, 160);
     return () => clearTimeout(timer);
-  }, [q, activeCategory]);
+  }, [q, activeCategory, isOnline]);
 
   function addToCart(product: PosProduct, qty = 1) {
     if (product.stock <= 0) return;
@@ -197,15 +302,62 @@ export default function PosPage() {
     }
     setSubmitting(true);
     setError(null);
+
+    const body = {
+      session_id: sessionId,
+      items: cart.map((line) => ({ product_id: line.product_id, quantity: line.quantity })),
+      payment_method: method,
+      amount_paid: method === 'cash' ? paid : total,
+      discount_amount: discountValue,
+      customer_phone: customerPhone || undefined,
+    };
+
+    if (!isOnline) {
+      try {
+        await queueSale({ body });
+        await refreshPendingCount();
+        const fakeSale: PosSale = {
+          id: 0,
+          sale_number: `OFFLINE-${Date.now()}`,
+          subtotal,
+          discount_amount: discountValue,
+          total,
+          payment_method: method,
+          amount_paid: body.amount_paid,
+          change_given: method === 'cash' ? paid - total : 0,
+          points_earned: 0,
+          status: 'completed',
+          notes: null,
+          items: cart.map((line, i) => ({
+            id: i,
+            product_id: line.product_id,
+            product_name: line.name,
+            barcode: line.barcode,
+            quantity: line.quantity,
+            unit_price: line.unit_price,
+            line_total: line.unit_price * line.quantity,
+          })),
+          cashier: { id: 0, name: 'غير متصل' },
+          customer: null,
+          session: null,
+          session_id: sessionId,
+          branch_id: 0,
+          created_at: new Date().toISOString(),
+          voided_at: null,
+        };
+        setLastSale(fakeSale);
+        clearCart();
+        return;
+      } catch (e) {
+        setError('تعذر حفظ البيع في وضع عدم الاتصال');
+        return;
+      } finally {
+        setSubmitting(false);
+      }
+    }
+
     try {
-      const r = await createPosSale({
-        session_id: sessionId,
-        items: cart.map((line) => ({ product_id: line.product_id, quantity: line.quantity })),
-        payment_method: method,
-        amount_paid: method === 'cash' ? paid : total,
-        discount_amount: discountValue,
-        customer_phone: customerPhone || undefined,
-      });
+      const r = await createPosSale(body);
       setLastSale(r.data);
       clearCart();
       refreshRecentSales();
@@ -247,16 +399,57 @@ export default function PosPage() {
         <div className="hidden md:flex items-center gap-5 text-sm">
           <span>{new Date().toLocaleDateString('en-CA')}</span>
           <span>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
-          <span className="inline-flex items-center gap-1 text-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            متصل
-          </span>
+          {isOnline ? (
+            <span className="inline-flex items-center gap-1 text-emerald-400">
+              <Wifi className="w-3 h-3" />
+              متصل
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-amber-400">
+              <CloudOff className="w-3 h-3" />
+              غير متصل
+              {offlinePending > 0 && (
+                <span className="bg-amber-500 text-white text-[10px] px-1.5 rounded-full">{offlinePending}</span>
+              )}
+            </span>
+          )}
         </div>
-        <Link href="/admin/pos/sessions" className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm inline-flex items-center gap-1.5">
-          <History className="w-4 h-4" />
-          الجلسات
-        </Link>
+        <div className="flex items-center gap-2">
+          {!isOnline && offlinePending > 0 && (
+            <button
+              type="button"
+              onClick={syncPendingSales}
+              disabled={syncing}
+              className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 text-xs inline-flex items-center gap-1"
+            >
+              <Upload className="w-3 h-3" />
+              {syncing ? 'مزامنة...' : `${offlinePending} مزامنة`}
+            </button>
+          )}
+          <Link href="/admin/pos/sessions" className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm inline-flex items-center gap-1.5">
+            <History className="w-4 h-4" />
+            الجلسات
+          </Link>
+        </div>
       </header>
+
+      {!isOnline && offlinePending > 0 && (
+        <div className="m-4 p-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg flex items-center justify-between">
+          <span className="inline-flex items-center gap-1">
+            <CloudOff className="w-3 h-3" />
+            {offlinePending} معاملة (معاملات) بانتظار المزامنة
+          </span>
+          <button
+            type="button"
+            onClick={syncPendingSales}
+            disabled={syncing}
+            className="px-2 py-1 rounded bg-amber-500 text-white text-xs inline-flex items-center gap-1"
+          >
+            <RefreshCw className="w-3 h-3" />
+            {syncing ? 'مزامنة...' : 'مزامنة الآن'}
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="m-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg flex justify-between items-center">
@@ -349,7 +542,7 @@ export default function PosPage() {
       </main>
 
       {lastSale && (
-        <ReceiptModal sale={lastSale} onClose={() => setLastSale(null)} />
+        <ReceiptModal sale={lastSale} onClose={() => setLastSale(null)} logoUrl={logoUrl} />
       )}
     </div>
   );
@@ -558,7 +751,41 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ReceiptModal({ sale, onClose }: { sale: PosSale; onClose: () => void }) {
+function ReceiptModal({ sale, onClose, logoUrl }: { sale: PosSale; onClose: () => void; logoUrl: string | null }) {
+  const [thermalError, setThermalError] = useState<string | null>(null);
+
+  async function handleThermalPrint() {
+    setThermalError(null);
+    try {
+      const receipt = generateReceipt({
+        shopName: 'ود المرضي ماركت',
+        shopLogo: logoUrl,
+        saleNumber: sale.sale_number,
+        date: sale.created_at ? new Date(sale.created_at).toLocaleString('ar-SA') : '',
+        cashier: sale.cashier?.name ?? '—',
+        customer: sale.customer
+          ? `${sale.customer.name} — ${sale.customer.phone}`
+          : null,
+        items: (sale.items ?? []).map((i) => ({
+          name: i.product_name,
+          qty: i.quantity,
+          price: i.unit_price,
+          total: i.line_total,
+        })),
+        subtotal: sale.subtotal,
+        discount: sale.discount_amount,
+        total: sale.total,
+        paid: sale.amount_paid,
+        change: sale.change_given,
+        paymentMethod: sale.payment_method,
+        pointsEarned: sale.points_earned,
+      });
+      await printBluetooth(receipt);
+    } catch (e) {
+      setThermalError(e instanceof Error ? e.message : 'تعذر الطباعة الحرارية');
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 grid place-items-center z-50 p-4">
       <div className="bg-white rounded-xl p-6 w-[420px] max-w-[95vw] shadow-xl" dir="rtl">
@@ -581,11 +808,24 @@ function ReceiptModal({ sale, onClose }: { sale: PosSale; onClose: () => void })
           <span>الإجمالي</span>
           <span className="text-[#0E5C3A]">{fmtSDG(sale.total)}</span>
         </div>
-        <div className="grid grid-cols-2 gap-2 mt-5">
+        {thermalError && (
+          <div className="mt-2 p-2 bg-red-50 text-red-700 text-xs rounded-lg">
+            {thermalError}
+          </div>
+        )}
+        <div className="grid grid-cols-3 gap-2 mt-5">
           <Link href={`/admin/pos/sales/${sale.id}`} className="h-10 rounded-lg border border-slate-200 text-sm font-bold inline-flex items-center justify-center gap-2">
             <Printer className="w-4 h-4" />
             طباعة
           </Link>
+          <button
+            type="button"
+            onClick={handleThermalPrint}
+            className="h-10 rounded-lg border border-slate-200 text-sm font-bold inline-flex items-center justify-center gap-2"
+          >
+            <Bluetooth className="w-4 h-4" />
+            حرارية
+          </button>
           <button type="button" onClick={onClose} className="h-10 rounded-lg bg-[#0E5C3A] text-white text-sm font-bold">
             عملية جديدة
           </button>
