@@ -9,13 +9,16 @@ import {
   downloadInvoice,
   listDrivers,
   assignDriver,
+  assignOrderBranch,
   generateInvoice,
+  listBranches,
   type AdminOrder,
   type AdminDriver,
+  type AdminBranch,
 } from '@/lib/admin/api';
 import { fmtSDG, fmtDate, STATUS_LABELS, STATUS_COLORS } from '@/lib/admin/format';
 import PageHeader from '@/components/admin/PageHeader';
-import { Search, MessageCircle, Printer, ShoppingBag, MapPin, Truck, Receipt } from 'lucide-react';
+import { Search, MessageCircle, Printer, ShoppingBag, MapPin, Truck, Receipt, Building2 } from 'lucide-react';
 
 const STATUSES: { value: string; label: string }[] = [
   { value: '', label: 'الكل' },
@@ -32,11 +35,15 @@ export default function AdminOrdersPage() {
   const [filters, setFilters] = useState({ status: '', q: '', page: 1 });
   const [selected, setSelected] = useState<AdminOrder | null>(null);
   const [drivers, setDrivers] = useState<AdminDriver[]>([]);
+  const [branches, setBranches] = useState<AdminBranch[]>([]);
 
   useEffect(() => {
     listDrivers()
       .then((r) => setDrivers(r.data))
       .catch(() => setDrivers([]));
+    listBranches()
+      .then((r) => setBranches(r.data))
+      .catch(() => setBranches([]));
   }, []);
 
   async function handleAssignDriver(driverId: number) {
@@ -45,6 +52,18 @@ export default function AdminOrdersPage() {
     const fresh = await getOrder(selected.id);
     setSelected(fresh.data);
     refresh();
+  }
+
+  async function handleAssignBranch(branchId: number) {
+    if (!selected || !branchId) return;
+    try {
+      await assignOrderBranch(selected.id, branchId);
+      const fresh = await getOrder(selected.id);
+      setSelected(fresh.data);
+      refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'فشل تغيير الفرع');
+    }
   }
 
   async function refresh() {

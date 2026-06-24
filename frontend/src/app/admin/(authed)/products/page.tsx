@@ -14,11 +14,13 @@ import {
   AdminApiError,
 } from '@/lib/admin/api';
 import { fmtSDG, fmtNumber } from '@/lib/admin/format';
+import { useBranchContext } from '@/lib/admin/branchContext';
 import PageHeader from '@/components/admin/PageHeader';
 import Drawer from '@/components/admin/Drawer';
 import { Pencil, Trash2, Search, Package } from 'lucide-react';
 
 export default function AdminProductsPage() {
+  const { currentBranchId } = useBranchContext();
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [meta, setMeta] = useState<{ total: number; current_page: number; last_page: number }>({
@@ -42,6 +44,7 @@ export default function AdminProductsPage() {
           category: filters.category,
           status: filters.status,
           page: filters.page,
+          ...(currentBranchId ? { branch_id: currentBranchId } : {}),
         }),
         categories.length ? Promise.resolve({ data: categories }) : listCategories(),
       ]);
@@ -56,7 +59,7 @@ export default function AdminProductsPage() {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.q, filters.category, filters.status, filters.page]);
+  }, [filters.q, filters.category, filters.status, filters.page, currentBranchId]);
 
   const stats = useMemo(
     () => ({

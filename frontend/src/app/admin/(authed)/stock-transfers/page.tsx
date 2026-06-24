@@ -9,7 +9,6 @@ import {
   Search,
   Trash2,
   Truck,
-  X,
   CheckCircle2,
   Ban,
 } from 'lucide-react';

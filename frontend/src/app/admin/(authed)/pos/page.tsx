@@ -89,7 +89,6 @@ export default function PosPage() {
   const [isOnline, setIsOnline] = useState(true);
   const [offlinePending, setOfflinePending] = useState(0);
   const [syncing, setSyncing] = useState(false);
-  const [printing, setPrinting] = useState(false);
 
   const refreshPendingCount = useCallback(async () => {
     const count = await pendingCount();
@@ -348,7 +347,7 @@ export default function PosPage() {
         setLastSale(fakeSale);
         clearCart();
         return;
-      } catch (e) {
+      } catch {
         setError('تعذر حفظ البيع في وضع عدم الاتصال');
         return;
       } finally {

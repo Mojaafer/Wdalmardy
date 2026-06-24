@@ -47,7 +47,7 @@ const REASON_LABELS: Record<string, string> = {
 };
 
 export default function AdminInventoryPage() {
-  const { currentBranchId, branches } = useBranchContext();
+  const { currentBranchId } = useBranchContext();
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [lowStock, setLowStock] = useState<LowStockProduct[]>([]);
   const [stats, setStats] = useState<InventoryStats>({ total_products: 0, low_stock: 0, out_of_stock: 0, total_stock_units: 0 });
@@ -80,13 +80,11 @@ export default function AdminInventoryPage() {
     setDrawerOpen(true);
   }
 
-  const activeBranch = branches.find((b) => b.id === currentBranchId);
-
   return (
     <div className="space-y-4">
       <PageHeader
         title="إدارة المخزون"
-        subtitle={`${fmtNumber(stats.total_products)} منتج · ${fmtNumber(stats.total_stock_units)} قطعة`}
+        subtitle={`${fmtNumber(stats.total_products)} منتج · ${fmtNumber(stats.total_stock_units)} قطعة${activeBranch ? ' · ' + activeBranch.name_ar : ''}`}
         actionLabel="تعديل مخزون"
         onAction={openAdjust}
       />
@@ -216,7 +214,7 @@ export default function AdminInventoryPage() {
   );
 }
 
-function AdjustForm({ products, onDone }: { products: AdminProduct[]; onDone: () => void }) {
+function AdjustForm({ products, branchId, onDone }: { products: AdminProduct[]; branchId: number | null; onDone: () => void }) {
   const [form, setForm] = useState({ product_id: '', type: 'in', reason: 'restock', quantity: '', notes: '' });
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -231,6 +229,7 @@ function AdjustForm({ products, onDone }: { products: AdminProduct[]; onDone: ()
         type: form.type as 'in' | 'out' | 'adjustment',
         reason: form.reason,
         quantity: Number(form.quantity),
+        branch_id: branchId ?? undefined,
         notes: form.notes || undefined,
       });
       onDone();

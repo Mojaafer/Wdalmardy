@@ -118,7 +118,7 @@ export function generateReceipt(data: ReceiptData): Uint8Array {
   return encoder.encode();
 }
 
-export async function printBluetooth(data: Uint8Array, deviceName?: string): Promise<void> {
+export async function printBluetooth(data: Uint8Array): Promise<void> {
   if (!navigator.bluetooth) {
     throw new Error('متصفحك لا يدعم تقنية Bluetooth');
   }
